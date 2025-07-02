@@ -1,0 +1,1254 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ILPO-TAXI - Умный Таксопарк - Подключение к Яндекс.Такси с ИИ-консультантом</title>
+    <meta name="description" content="Первый умный таксопарк с ИИ-агентом. Подключайтесь к Яндекс.Такси за 24 часа. Круглосуточная поддержка ИИ-консультанта.">
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Swiper CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="static/css/styles.css">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="static/images/favicon.ico">
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="Умный Таксопарк - ilpo-taxi.top">
+    <meta property="og:description" content="Первый умный таксопарк с ИИ-агентом. Подключайтесь к Яндекс.Такси за 24 часа.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://ilpo-taxi.top">
+
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Organization",
+            "name": "Умный Таксопарк",
+            "url": "https://ilpo-taxi.top",
+            "description": "Первый умный таксопарк с ИИ-агентом для подключения к Яндекс.Такси"
+        }
+    </script>
+</head>
+
+<body>
+    <!-- Header Navigation -->
+    <header class="header-nav">
+        <nav class="navbar navbar-expand-lg navbar-dark">
+            <div class="container">
+                <a id="navbar-brand" class="navbar-brand glitch-brand" href="#">
+                    <span class="glitch-logo" data-text="ILPO-TAXI">ILPO-TAXI</span>
+                    <span class="glitch-subtitle">УМНЫЙ ТАКСОПАРК</span>
+                </a>
+
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav ms-auto">
+                        <li class="nav-item">
+                            <a class="nav-link" href="#benefits">Преимущества</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#process">Как подключиться</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#calculator">Калькулятор</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#reviews">Отзывы</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#faq">FAQ</a>
+                        </li>
+                        <li class="nav-item">
+                            <button class="btn btn-primary btn-sm ms-2" onclick="openChat()">
+                                🤖 ИИ-Консультант
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero" id="hero">
+        <div class="container">
+            <div class="row align-items-center min-vh-100 py-5">
+                <div class="col-lg-6">
+                    <h1 class="hero-title mb-4">
+                        Первый в России<br>
+                        <span class="text-primary">Умный Таксопарк</span><br> с ИИ-агентом
+                    </h1>
+                    <p class="hero-subtitle mb-4">
+                        Присоединяйтесь к <strong>ILPO-TAXI</strong> и начните зарабатывать! Устроим <strong>Водителем - Яндекс.Такси</strong> или <strong>Курьером - Яндекс.Доставки</strong>, всего за 24 часа. Мы предлагаем оперативное подключение, выгодные
+                        условия и непрерывную поддержку нашего ИИ-консультанта 24/7
+                    </p>
+
+                    <!-- Quick Registration Form -->
+                    <div class="hero-form-card">
+                        <h3 class="h5 mb-3">🚀 Быстрая регистрация</h3>
+                        <form id="start-registration" class="row g-3">
+                            <div class="col-md-6">
+                                <input type="text" class="form-control" id="name" placeholder="Ваше имя" required>
+                            </div>
+                            <div class="col-md-6">
+                                <input type="tel" class="form-control" id="phone" placeholder="+7 (___) ___-__-__" required>
+                            </div>
+                            <div class="col-12">
+                                <select class="form-select" id="role" required>
+                                    <option value="">Выберите роль</option>
+                                    <option value="driver">Водитель</option>
+                                    <option value="courier">Курьер</option>
+                                    <option value="driver-courier">Водитель + Курьер</option>
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="agreement" required>
+                                    <label class="form-check-label" for="agreement">
+                                        Согласен с <a href="#" class="text-primary">условиями обработки данных</a>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-primary btn-lg w-100">
+                                    Подключиться к Яндекс.Такси
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="col-lg-6">
+                    <div class="hero-image">
+                        <div class="ai-promo-card">
+                            <div class="ai-avatar">🤖</div>
+                            <div class="ai-content">
+                                <h4>ИИ-Консультант</h4>
+                                <p>Отвечу на любые вопросы о подключении к Яндекс.Такси, Доставке и работе курьером 24/7</p>
+                                <button class="btn btn-outline-primary btn-sm" onclick="openChat()">
+                                    💬 Задать вопрос ИИ
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Benefits Section -->
+    <section class="benefits-modern py-5" id="benefits">
+        <div class="container">
+            <div class="row align-items-center mb-5">
+                <div class="col-lg-6">
+                    <div class="benefits-header">
+                        <span class="section-badge">💎 Наши преимущества</span>
+                        <h2 class="benefits-title">
+                            Почему более <span class="text-gradient">1,000 водителей и курьеров</span><br> выбрали именно нас?
+                        </h2>
+                        <p class="benefits-subtitle">
+                            Мы не просто таксопарк. Мы — технологическая экосистема нового поколения с ИИ-консультантом, которая делает работу водителей и курьеров максимально прибыльной и комфортной.
+                        </p>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="benefits-stats">
+                        <div class="stat-item">
+                            <div class="stat-number percentage-stat-driver" data-count="1247">0</div>
+                            <div class="stat-label">Активных водителей</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-number percentage-stat" data-count="98">0</div>
+                            <div class="stat-label">Довольных клиентов</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-number">24/7</div>
+                            <div class="stat-label">Поддержка ИИ</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Benefits Swiper -->
+            <div class="benefits-swiper-container">
+                <div class="swiper benefits-swiper">
+                    <div class="swiper-wrapper">
+                        <!-- Benefit 1: Заработок -->
+                        <div class="swiper-slide">
+                            <div class="benefit-card-modern">
+                                <div class="benefit-icon-modern">
+                                    <div class="icon-glow">💰</div>
+                                </div>
+                                <div class="benefit-content">
+                                    <h3>Максимальный заработок</h3>
+                                    <div class="benefit-highlight">От 1,5% комиссии</div>
+                                    <p>Одна из самых низких комиссий на рынке. Водители зарабатывают <strong>80-200 тыс. ₽/мес</strong>, курьеры <strong>60-120 тыс. ₽/мес</strong></p>
+                                    <ul class="benefit-features">
+                                        <li>✅ Ежедневные выплаты</li>
+                                        <li>✅ Бонусы за активность</li>
+                                        <li>✅ Премии за рейтинг 4.9+</li>
+                                        <li>✅ Чаевые остаются полностью</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Benefit 2: ИИ-поддержка -->
+                        <div class="swiper-slide">
+                            <div class="benefit-card-modern">
+                                <div class="benefit-icon-modern ai-icon">
+                                    <div class="icon-glow ai-glow">🤖</div>
+                                </div>
+                                <div class="benefit-content">
+                                    <h3>ИИ-консультант 24/7</h3>
+                                    <div class="benefit-highlight">Первые в России</div>
+                                    <p>Революционная технология поддержки. ИИ мгновенно решает 95% вопросов водителей и курьеров</p>
+                                    <ul class="benefit-features">
+                                        <li>🧠 Помощь с документами</li>
+                                        <li>⚡ Мгновенные ответы</li>
+                                        <li>📊 Аналитика заработка</li>
+                                        <li>🎯 Персональные советы</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Benefit 3: Быстрое подключение -->
+                        <div class="swiper-slide">
+                            <div class="benefit-card-modern">
+                                <div class="benefit-icon-modern">
+                                    <div class="icon-glow">⚡</div>
+                                </div>
+                                <div class="benefit-content">
+                                    <h3>Мгновенное подключение</h3>
+                                    <div class="benefit-highlight">За 2-24 часа</div>
+                                    <p>Самое быстрое подключение в отрасли. Курьеры начинают работать через 2-4 часа, водители — через 24 часа</p>
+                                    <ul class="benefit-features">
+                                        <li>📱 Онлайн-регистрация</li>
+                                        <li>📋 Минимум документов</li>
+                                        <li>🤖 ИИ проверяет документы</li>
+                                        <li>🚀 Быстрый старт</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Benefit 4: Юридическая поддержка -->
+                        <div class="swiper-slide">
+                            <div class="benefit-card-modern">
+                                <div class="benefit-icon-modern">
+                                    <div class="icon-glow">⚖️</div>
+                                </div>
+                                <div class="benefit-content">
+                                    <h3>Полная юридическая защита</h3>
+                                    <div class="benefit-highlight">580-ФЗ эксперты</div>
+                                    <p>Команда юристов поможет с оформлением всех документов по новому закону 580-ФЗ</p>
+                                    <ul class="benefit-features">
+                                        <li>📜 Помощь с разрешениями</li>
+                                        <li>🛡️ ОСГОП страхование</li>
+                                        <li>📋 Парковая самозанятость</li>
+                                        <li>⚖️ Защита в спорах</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Benefit 5: Региональная экспертиза -->
+                        <div class="swiper-slide">
+                            <div class="benefit-card-modern">
+                                <div class="benefit-icon-modern">
+                                    <div class="icon-glow">🗺️</div>
+                                </div>
+                                <div class="benefit-content">
+                                    <h3>Работаем по всей России</h3>
+                                    <div class="benefit-highlight">85 регионов</div>
+                                    <p>Знаем особенности каждого региона. Поможем подключиться в любом городе России</p>
+                                    <ul class="benefit-features">
+                                        <li>🏙️ Москва, СПб, регионы</li>
+                                        <li>📋 Местные требования</li>
+                                        <li>🤝 Партнеры в регионах</li>
+                                        <li>🔄 Переезд между городами</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Benefit 6: Мультистатус -->
+                        <div class="swiper-slide">
+                            <div class="benefit-card-modern">
+                                <div class="benefit-icon-modern">
+                                    <div class="icon-glow">🔄</div>
+                                </div>
+                                <div class="benefit-content">
+                                    <h3>Водитель + Курьер</h3>
+                                    <div class="benefit-highlight">Двойной доход</div>
+                                    <p>Уникальная возможность работать и водителем, и курьером. Увеличьте доход в 1.5-2 раза</p>
+                                    <ul class="benefit-features">
+                                        <li>🚗 Яндекс.Такси</li>
+                                        <li>📦 Яндекс.Доставка</li>
+                                        <li>🍕 Яндекс.Еда</li>
+                                        <li>📈 Максимальная загрузка</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Navigation -->
+                    <div class="swiper-pagination benefits-pagination"></div>
+                    <div class="swiper-button-next benefits-next"></div>
+                    <div class="swiper-button-prev benefits-prev"></div>
+                </div>
+            </div>
+
+            <!-- CTA Section -->
+            <div class="benefits-cta">
+                <div class="row align-items-center">
+                    <div class="col-lg-8">
+                        <h3>Готовы присоединиться к лучшему таксопарку России?</h3>
+                        <p>Более 1000 водителей и курьеров уже зарабатывают с нами. Присоединяйтесь!</p>
+                    </div>
+                    <div class="col-lg-4 text-lg-end">
+                        <button class="btn btn-primary btn-lg pulse-btn" onclick="openChat()">
+                            🚀 Подключиться сейчас
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Process Section -->
+    <section class="process-modern py-5" id="process">
+        <div class="container">
+            <!-- Header -->
+            <div class="text-center mb-5">
+                <span class="section-badge">🚀 Процесс подключения</span>
+                <h2 class="process-title">
+                    Начните зарабатывать <span class="text-gradient">уже сегодня</span>
+                </h2>
+                <p class="process-subtitle">
+                    Революционно быстрое подключение благодаря ИИ-технологиям и автоматизации процессов
+                </p>
+            </div>
+
+            <!-- Role Selector -->
+            <div class="role-selector mb-5">
+                <div class="role-tabs">
+                    <button class="role-tab active" data-role="driver">
+                        🚗 Водители
+                    </button>
+                    <button class="role-tab" data-role="courier">
+                        📦 Курьеры
+                    </button>
+                </div>
+            </div>
+
+            <!-- Driver Process -->
+            <div class="process-content" id="driver-process">
+                <div class="process-timeline">
+                    <div class="timeline-container">
+                        <!-- Step 1 -->
+                        <div class="timeline-step" data-step="1">
+                            <div class="step-marker">
+                                <div class="step-number">1</div>
+                                <div class="step-time">2 мин</div>
+                            </div>
+                            <div class="step-content">
+                                <div class="step-header">
+                                    <h3>📝 Быстрая заявка</h3>
+                                    <span class="step-badge">Мгновенно</span>
+                                </div>
+                                <p>Заполните простую форму или напишите ИИ-консультанту. Укажите только базовую информацию.</p>
+                                <div class="step-details">
+                                    <div class="detail-item">
+                                        <span class="detail-icon">👤</span>
+                                        <span>Имя и телефон</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-icon">🏙️</span>
+                                        <span>Город работы</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-icon">🚗</span>
+                                        <span>Наличие автомобиля</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 2 -->
+                        <div class="timeline-step" data-step="2">
+                            <div class="step-marker">
+                                <div class="step-number">2</div>
+                                <div class="step-time">15 мин</div>
+                            </div>
+                            <div class="step-content">
+                                <div class="step-header">
+                                    <h3>📞 Консультация менеджера</h3>
+                                    <span class="step-badge">Персонально</span>
+                                </div>
+                                <p>Персональный менеджер свяжется с вами в течение 15 минут для уточнения деталей.</p>
+                                <div class="step-details">
+                                    <div class="detail-item">
+                                        <span class="detail-icon">📋</span>
+                                        <span>Список документов</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-icon">⚖️</span>
+                                        <span>Выбор статуса (ИП/самозанятый)</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-icon">💰</span>
+                                        <span>Условия сотрудничества</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 3 -->
+                        <div class="timeline-step" data-step="3">
+                            <div class="step-marker">
+                                <div class="step-number">3</div>
+                                <div class="step-time">2-4 часа</div>
+                            </div>
+                            <div class="step-content">
+                                <div class="step-header">
+                                    <h3>📄 Подготовка документов</h3>
+                                    <span class="step-badge">С поддержкой</span>
+                                </div>
+                                <p>Загрузите документы через приложение. ИИ проверит качество фото и подскажет, если что-то нужно исправить.</p>
+                                <div class="step-details">
+                                    <div class="detail-item">
+                                        <span class="detail-icon">🆔</span>
+                                        <span>Паспорт + права</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-icon">🚗</span>
+                                        <span>СТС + ОСАГО "Такси" (Если хотите зарегистрироваться как ИП или самозанятый)</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-icon">📸</span>
+                                        <span>Фото автомобиля (6 ракурсов)</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 4 -->
+                        <div class="timeline-step" data-step="4">
+                            <div class="step-marker">
+                                <div class="step-number">4</div>
+                                <div class="step-time">1-4 часа</div>
+                            </div>
+                            <div class="step-content">
+                                <div class="step-header">
+                                    <h3>✅ Проверка и активация</h3>
+                                    <span class="step-badge">Автоматически</span>
+                                </div>
+                                <p>ИИ автоматически проверяет документы. При необходимости специалист проводит ручную проверку.</p>
+                                <div class="step-details">
+                                    <div class="detail-item">
+                                        <span class="detail-icon">🤖</span>
+                                        <span>ИИ-проверка документов</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-icon">👨‍💼</span>
+                                        <span>Верификация специалистом</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-icon">📱</span>
+                                        <span>Активация в приложении</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 5 -->
+                        <div class="timeline-step" data-step="5">
+                            <div class="step-marker">
+                                <div class="step-number">5</div>
+                                <div class="step-time">Сразу</div>
+                            </div>
+                            <div class="step-content">
+                                <div class="step-header">
+                                    <h3>🚀 Первый заработок</h3>
+                                    <span class="step-badge success">Готово!</span>
+                                </div>
+                                <p>Выходите на линию и начинайте зарабатывать! ИИ-консультант поможет с первыми заказами.</p>
+                                <div class="step-details">
+                                    <div class="detail-item">
+                                        <span class="detail-icon">💸</span>
+                                        <span>Ежедневные выплаты</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-icon">📊</span>
+                                        <span>Аналитика заработка</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-icon">🎯</span>
+                                        <span>Персональные советы</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Courier Process -->
+            <div class="process-content" id="courier-process" style="display: none;">
+                <div class="process-timeline">
+                    <div class="timeline-container">
+                        <!-- Step 1 -->
+                        <div class="timeline-step" data-step="1">
+                            <div class="step-marker">
+                                <div class="step-number">1</div>
+                                <div class="step-time">1 мин</div>
+                            </div>
+                            <div class="step-content">
+                                <div class="step-header">
+                                    <h3>📝 Экспресс-заявка</h3>
+                                    <span class="step-badge">Мгновенно</span>
+                                </div>
+                                <p>Для курьеров процесс еще проще! Минимум данных для быстрого старта.</p>
+                                <div class="step-details">
+                                    <div class="detail-item">
+                                        <span class="detail-icon">👤</span>
+                                        <span>Имя и телефон</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-icon">🚲</span>
+                                        <span>Тип передвижения</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-icon">📍</span>
+                                        <span>Район работы</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 2 -->
+                        <div class="timeline-step" data-step="2">
+                            <div class="step-marker">
+                                <div class="step-number">2</div>
+                                <div class="step-time">10 мин</div>
+                            </div>
+                            <div class="step-content">
+                                <div class="step-header">
+                                    <h3>📋 Минимум документов</h3>
+                                    <span class="step-badge">Быстро</span>
+                                </div>
+                                <p>Всего 2-3 документа для курьеров. ИИ поможет с правильным оформлением.</p>
+                                <div class="step-details">
+                                    <div class="detail-item">
+                                        <span class="detail-icon">🆔</span>
+                                        <span>Паспорт гражданина РФ</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-icon">📄</span>
+                                        <span>СНИЛС</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-icon">🚗</span>
+                                        <span>Права (только для автокурьеров)</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 3 -->
+                        <div class="timeline-step" data-step="3">
+                            <div class="step-marker">
+                                <div class="step-number">3</div>
+                                <div class="step-time">30 мин</div>
+                            </div>
+                            <div class="step-content">
+                                <div class="step-header">
+                                    <h3>🎓 Экспресс-обучение</h3>
+                                    <span class="step-badge">Интерактивно</span>
+                                </div>
+                                <p>Короткое обучение с ИИ-тренером. Изучите основы за 15-30 минут.</p>
+                                <div class="step-details">
+                                    <div class="detail-item">
+                                        <span class="detail-icon">📱</span>
+                                        <span>Работа с приложением</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-icon">🍕</span>
+                                        <span>Правила доставки еды</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-icon">⭐</span>
+                                        <span>Стандарты качества</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 4 -->
+                        <div class="timeline-step" data-step="4">
+                            <div class="step-marker">
+                                <div class="step-number">4</div>
+                                <div class="step-time">Сразу</div>
+                            </div>
+                            <div class="step-content">
+                                <div class="step-header">
+                                    <h3>🚀 Начало работы</h3>
+                                    <span class="step-badge success">Готово!</span>
+                                </div>
+                                <p>Получите термосумку и начинайте зарабатывать в тот же день!</p>
+                                <div class="step-details">
+                                    <div class="detail-item">
+                                        <span class="detail-icon">🎒</span>
+                                        <span>Термосумка в подарок</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-icon">💰</span>
+                                        <span>Первые заказы с бонусами</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-icon">📈</span>
+                                        <span>Рост дохода каждый день</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Process CTA -->
+            <div class="process-cta">
+                <div class="cta-card">
+                    <div class="row align-items-center">
+                        <div class="col-lg-8">
+                            <h3>🚀 Готовы начать зарабатывать?</h3>
+                            <p>Присоединяйтесь к тысячам довольных водителей и курьеров!</p>
+                            <div class="cta-features">
+                                <span class="cta-feature">⚡ Подключение за 2-24 часа</span>
+                                <span class="cta-feature">🤖 ИИ-поддержка 24/7</span>
+                                <span class="cta-feature">💰 Высокий заработок</span>
+                            </div>
+                        </div>
+                        <div class="col-lg-4 text-lg-end">
+                            <button class="btn btn-primary btn-lg pulse-btn" onclick="openChat()">
+                                💬 Начать с ИИ
+                            </button>
+                            <p class="small text-muted mt-2">Ответим на все вопросы за 30 секунд</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Calculator Section -->
+    <section class="calculator py-5" id="calculator">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-lg-10">
+                    <div class="text-center mb-5">
+                        <span class="section-badge">💰 Калькулятор</span>
+                        <h2 class="calculator-title">Рассчитайте свой заработок</h2>
+                        <p class="calculator-subtitle">Выберите город, тип работы и узнайте реальный доход</p>
+                    </div>
+
+                    <div class="calculator-card">
+                        <!-- Выбор города и типа работы -->
+                        <div class="row g-4 mb-4">
+                            <div class="col-md-6">
+                                <label for="citySelect" class="form-label">🏙️ Выберите город</label>
+                                <select class="form-select calculator-select" id="citySelect">
+                                    <option value="penza">Пенза</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="jobTypeSelect" class="form-label">🚗 Тип работы</label>
+                                <select class="form-select calculator-select" id="jobTypeSelect">
+                                    <option value="taxi">🚗 Водитель такси</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Информация о выбранном типе работы -->
+                        <div class="job-type-info mb-4" id="jobTypeInfo">
+                            <!-- Динамически заполняется JS -->
+                        </div>
+
+                        <!-- Параметры работы -->
+                        <div class="row g-4 mb-4">
+                            <div class="col-md-6">
+                                <label for="hoursPerDay" class="form-label">⏰ Часов в день</label>
+                                <input type="range" class="form-range calculator-range" id="hoursPerDay" min="4" max="12" value="8">
+                                <div class="range-value"><span id="hoursValue">8</span> часов</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="daysPerWeek" class="form-label">📅 Дней в неделю</label>
+                                <input type="range" class="form-range calculator-range" id="daysPerWeek" min="3" max="7" value="5">
+                                <div class="range-value"><span id="daysValue">5</span> дней</div>
+                            </div>
+                        </div>
+
+                        <!-- Статистика -->
+                        <div class="calculator-stats mb-4">
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <div class="stat-card">
+                                        <div class="stat-icon">💵</div>
+                                        <div class="stat-label">Средний чек</div>
+                                        <div class="stat-value" id="avgOrderInfo">280 ₽</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="stat-card">
+                                        <div class="stat-icon">📊</div>
+                                        <div class="stat-label">Заказов в час</div>
+                                        <div class="stat-value" id="ordersPerHourInfo">2.5</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="stat-card">
+                                        <div class="stat-icon">💎</div>
+                                        <div class="stat-label">Ваш процент</div>
+                                        <div class="stat-value">85%</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Результаты расчета -->
+                        <div class="calculator-results">
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <div class="result-card daily">
+                                        <div class="result-period">В день</div>
+                                        <div class="result-amount" id="dailyEarning">4 800 ₽</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="result-card weekly">
+                                        <div class="result-period">В неделю</div>
+                                        <div class="result-amount" id="weeklyEarning">24 000 ₽</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="result-card monthly">
+                                        <div class="result-period">В месяц</div>
+                                        <div class="result-amount main-result" id="monthlyEarning">104 000 ₽</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Дисклеймер -->
+                        <div class="calculator-disclaimer">
+                            <p>* Расчет приблизительный, реальный доход зависит от множества факторов: время работы, активность, сезонность, тарифы города</p>
+                            <div class="cta-buttons">
+                                <button class="btn btn-primary me-3" onclick="openChat()">💬 Узнать подробнее</button>
+                                <button class="btn btn-outline-primary" onclick="document.getElementById('hero').scrollIntoView()">📝 Подключиться</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Reviews Section -->
+    <section class="reviews py-5" id="reviews">
+        <div class="container">
+            <div class="text-center mb-5">
+                <span class="section-badge">💬 Отзывы</span>
+                <h2 class="reviews-title">Что говорят наши партнеры</h2>
+                <p class="reviews-subtitle">Реальные отзывы водителей и курьеров о работе с ILPO-TAXI</p>
+            </div>
+
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <div class="review-card">
+                        <div class="review-header">
+                            <div class="review-avatar verified">А</div>
+                            <div class="review-info">
+                                <h5>Алексей К.</h5>
+                                <div class="review-rating">
+                                    <span class="stars">⭐⭐⭐⭐⭐</span>
+                                    <span class="rating-text">5.0</span>
+                                </div>
+                                <div class="review-role">🚗 Водитель такси</div>
+                            </div>
+                        </div>
+                        <div class="review-content">
+                            <p>"ИИ-консультант просто спас! В 3 ночи помог разобраться с документами. Таких таксопарков еще не было! Комиссия действительно низкая."</p>
+                            <div class="review-stats">
+                                <span class="stat">💰 +40% к доходу</span>
+                                <span class="stat">⏱️ 2 мес. в парке</span>
+                            </div>
+                        </div>
+                        <div class="review-verified">✅ Проверенный отзыв</div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="review-card featured">
+                        <div class="review-badge">🏆 Лучший отзыв</div>
+                        <div class="review-header">
+                            <div class="review-avatar verified">М</div>
+                            <div class="review-info">
+                                <h5>Мария С.</h5>
+                                <div class="review-rating">
+                                    <span class="stars">⭐⭐⭐⭐⭐</span>
+                                    <span class="rating-text">5.0</span>
+                                </div>
+                                <div class="review-role">🚙 Курьер на авто</div>
+                            </div>
+                        </div>
+                        <div class="review-content">
+                            <p>"Подключилась за день! ИИ объяснил все условия лучше любого менеджера. Зарабатываю больше чем в прошлом парке. Поддержка 24/7 реально работает!"</p>
+                            <div class="review-stats">
+                                <span class="stat">💰 +60% к доходу</span>
+                                <span class="stat">⏱️ 1 мес. в парке</span>
+                            </div>
+                        </div>
+                        <div class="review-verified">✅ Проверенный отзыв</div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="review-card">
+                        <div class="review-header">
+                            <div class="review-avatar verified">Д</div>
+                            <div class="review-info">
+                                <h5>Дмитрий Р.</h5>
+                                <div class="review-rating">
+                                    <span class="stars">⭐⭐⭐⭐⭐</span>
+                                    <span class="rating-text">5.0</span>
+                                </div>
+                                <div class="review-role">🚴 Курьер на велосипеде</div>
+                            </div>
+                        </div>
+                        <div class="review-content">
+                            <p>"Курьером работаю полгода. Привык к живому общению, но ИИ-консультант удивил своей эффективностью! Всегда поможет с любым вопросом. Условия честные, выплаты мгновенные. Сервис ПУШКА!"</p>
+                            <div class="review-stats">
+                                <span class="stat">💰 85% от заказа</span>
+                                <span class="stat">⏱️ 6 мес. в парке</span>
+                            </div>
+                        </div>
+                        <div class="review-verified">✅ Проверенный отзыв</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Общая статистика -->
+            <div class="reviews-stats mt-5">
+                <div class="row g-3">
+                    <div class="col-md-3 col-6">
+                        <div class="stat-item">
+                            <div class="stat-number">4.9</div>
+                            <div class="stat-label">Средняя оценка</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="stat-item">
+                            <div class="stat-number">98<span class="percentage">%</span></div>
+                            <div class="stat-label">Довольных партнеров</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="stat-item">
+                            <div class="stat-number">1247</div>
+                            <div class="stat-label">Активных водителей</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="stat-item">
+                            <div class="stat-number">24/7</div>
+                            <div class="stat-label">Поддержка ИИ</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section class="faq py-5" id="faq">
+        <div class="container">
+            <div class="text-center mb-5">
+                <span class="section-badge">❓ FAQ</span>
+                <h2 class="faq-title">Частые вопросы</h2>
+                <p class="faq-subtitle">Ответы на самые популярные вопросы о работе с ILPO-TAXI</p>
+            </div>
+
+            <div class="row justify-content-center">
+                <div class="col-lg-10">
+                    <div class="faq-container">
+                        <div class="row g-4">
+                            <!-- Левая колонка -->
+                            <div class="col-lg-6">
+                                <div class="faq-item">
+                                    <div class="faq-question" data-bs-toggle="collapse" data-bs-target="#faq1">
+                                        <div class="faq-icon">📋</div>
+                                        <h3>Какие документы нужны для подключения?</h3>
+                                        <div class="faq-toggle">+</div>
+                                    </div>
+                                    <div id="faq1" class="faq-answer collapse">
+                                        <div class="faq-content">
+                                            <div class="doc-list">
+                                                <div class="doc-category">
+                                                    <h5>🚗 Для водителей такси:</h5>
+                                                    <ul>
+                                                        <li>Паспорт гражданина РФ</li>
+                                                        <li>Водительское удостоверение</li>
+                                                        <li>СТС автомобиля</li>
+                                                        <li>Диагностическая карта</li>
+                                                    </ul>
+                                                </div>
+                                                <div class="doc-category">
+                                                    <h5>🚴 Для курьеров:</h5>
+                                                    <ul>
+                                                        <li>Паспорт гражданина РФ</li>
+                                                        <li>Справка о несудимости*</li>
+                                                        <li>Медицинская справка*</li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                            <p class="faq-note">* Требования могут отличаться в зависимости от региона</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="faq-item">
+                                    <div class="faq-question" data-bs-toggle="collapse" data-bs-target="#faq2">
+                                        <div class="faq-icon">🤖</div>
+                                        <h3>Как работает ИИ-консультант?</h3>
+                                        <div class="faq-toggle">+</div>
+                                    </div>
+                                    <div id="faq2" class="faq-answer collapse">
+                                        <div class="faq-content">
+                                            <p>ИИ-консультант доступен <strong>24/7</strong> через чат на сайте и знает все о:</p>
+                                            <div class="feature-grid">
+                                                <div class="feature-item">
+                                                    <span class="feature-icon">🚗</span>
+                                                    <span>Работе в Яндекс.Такси</span>
+                                                </div>
+                                                <div class="feature-item">
+                                                    <span class="feature-icon">📦</span>
+                                                    <span>Яндекс.Доставке</span>
+                                                </div>
+                                                <div class="feature-item">
+                                                    <span class="feature-icon">💰</span>
+                                                    <span>Заработке и выплатах</span>
+                                                </div>
+                                                <div class="feature-item">
+                                                    <span class="feature-icon">📋</span>
+                                                    <span>Документах и подключении</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="faq-item">
+                                    <div class="faq-question" data-bs-toggle="collapse" data-bs-target="#faq3">
+                                        <div class="faq-icon">💎</div>
+                                        <h3>Какой процент берет таксопарк?</h3>
+                                        <div class="faq-toggle">+</div>
+                                    </div>
+                                    <div id="faq3" class="faq-answer collapse">
+                                        <div class="faq-content">
+                                            <div class="commission-info">
+                                                <div class="commission-highlight">
+                                                    <div class="commission-percent">1.5%</div>
+                                                    <div class="commission-text">Минимальная комиссия</div>
+                                                </div>
+                                                <p>Один из <strong>самых низких процентов</strong> среди всех таксопарков!</p>
+                                                <div class="commission-details">
+                                                    <div class="detail-item">
+                                                        <span class="detail-icon">⭐</span>
+                                                        <span>Новые водители: 15%</span>
+                                                    </div>
+                                                    <div class="detail-item">
+                                                        <span class="detail-icon">🏆</span>
+                                                        <span>Опытные водители: 1.5%</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Правая колонка -->
+                            <div class="col-lg-6">
+                                <div class="faq-item">
+                                    <div class="faq-question" data-bs-toggle="collapse" data-bs-target="#faq4">
+                                        <div class="faq-icon">🚙</div>
+                                        <h3>Можно ли работать на своем автомобиле?</h3>
+                                        <div class="faq-toggle">+</div>
+                                    </div>
+                                    <div id="faq4" class="faq-answer collapse">
+                                        <div class="faq-content">
+                                            <p><strong>Да!</strong> У вас есть несколько вариантов:</p>
+                                            <div class="car-options">
+                                                <div class="car-option">
+                                                    <div class="option-icon">🚗</div>
+                                                    <div class="option-details">
+                                                        <h5>Свой автомобиль</h5>
+                                                        <p>Работайте на собственном авто без дополнительных затрат</p>
+                                                    </div>
+                                                </div>
+                                                <div class="car-option">
+                                                    <div class="option-icon">🏢</div>
+                                                    <div class="option-details">
+                                                        <h5>Аренда в Пензе</h5>
+                                                        <p>Автопарк с выгодными условиями от <strong>1200₽/сутки</strong></p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="faq-item">
+                                    <div class="faq-question" data-bs-toggle="collapse" data-bs-target="#faq5">
+                                        <div class="faq-icon">⏰</div>
+                                        <h3>Как быстро можно начать работать?</h3>
+                                        <div class="faq-toggle">+</div>
+                                    </div>
+                                    <div id="faq5" class="faq-answer collapse">
+                                        <div class="faq-content">
+                                            <div class="timeline-mini">
+                                                <div class="timeline-item">
+                                                    <div class="timeline-time">2-4 часа</div>
+                                                    <div class="timeline-desc">Курьеры</div>
+                                                </div>
+                                                <div class="timeline-item">
+                                                    <div class="timeline-time">24 часа</div>
+                                                    <div class="timeline-desc">Водители</div>
+                                                </div>
+                                            </div>
+                                            <p>Самые быстрые сроки подключения в городе!</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="faq-item">
+                                    <div class="faq-question" data-bs-toggle="collapse" data-bs-target="#faq6">
+                                        <div class="faq-icon">💰</div>
+                                        <h3>Как происходят выплаты?</h3>
+                                        <div class="faq-toggle">+</div>
+                                    </div>
+                                    <div id="faq6" class="faq-answer collapse">
+                                        <div class="faq-content">
+                                            <div class="payment-features">
+                                                <div class="payment-item">
+                                                    <span class="payment-icon">⚡</span>
+                                                    <span>Мгновенные выплаты 24/7</span>
+                                                </div>
+                                                <div class="payment-item">
+                                                    <span class="payment-icon">💳</span>
+                                                    <span>На карту любого банка</span>
+                                                </div>
+                                                <div class="payment-item">
+                                                    <span class="payment-icon">🔒</span>
+                                                    <span>Безопасные транзакции</span>
+                                                </div>
+                                                <div class="payment-item">
+                                                    <span class="payment-icon">📱</span>
+                                                    <span>Через приложение партнера</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CTA блок -->
+                    <div class="faq-cta mt-5">
+                        <div class="faq-cta-content">
+                            <h3>Не нашли ответ на свой вопрос?</h3>
+                            <p>Наш ИИ-консультант ответит на любые вопросы в режиме 24/7</p>
+                            <div class="faq-cta-buttons">
+                                <button class="btn btn-primary me-3" onclick="openChat()">💬 Задать вопрос ИИ</button>
+                                <a href="tel:+79273748151" class="btn btn-outline-primary">📞 Позвонить менеджеру</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+
+
+    <!-- Footer -->
+    <footer class="footer-modern">
+        <div class="container">
+            <!-- Основной контент подвала -->
+            <div class="footer-main">
+                <div class="row g-4">
+                    <!-- Логотип и описание -->
+                    <div class="col-lg-4 col-md-6">
+                        <div class="footer-brand">
+                            <div class="footer-logo">
+                                <span class="footer-logo-text">ILPO-TAXI</span>
+                                <span class="footer-logo-subtitle">УМНЫЙ ТАКСОПАРК</span>
+                            </div>
+                            <p class="footer-description">
+                                Первый таксопарк с ИИ-консультантом в Пензе. Подключаем к Яндекс.Такси и Доставке за 24 часа. Минимальные комиссии, максимальный заработок.
+                            </p>
+                            <div class="footer-stats">
+                                <div class="footer-stat">
+                                    <span class="stat-number">1247+</span>
+                                    <span class="stat-label">Водителей</span>
+                                </div>
+                                <div class="footer-stat">
+                                    <span class="stat-number">4.9★</span>
+                                    <span class="stat-label">Рейтинг</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Услуги -->
+                    <div class="col-lg-2 col-md-3 col-6">
+                        <div class="footer-section">
+                            <h5 class="footer-title">🚗 Услуги</h5>
+                            <ul class="footer-links">
+                                <li><a href="#hero">Яндекс.Такси</a></li>
+                                <li><a href="#hero">Яндекс.Доставка</a></li>
+                                <li><a href="#hero">Работа курьером</a></li>
+                                <li><a href="#hero">Аренда автомобилей</a></li>
+                                <li><a href="#calculator">Калькулятор заработка</a></li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Информация -->
+                    <div class="col-lg-2 col-md-3 col-6">
+                        <div class="footer-section">
+                            <h5 class="footer-title">📋 Информация</h5>
+                            <ul class="footer-links">
+                                <li><a href="#benefits">Преимущества</a></li>
+                                <li><a href="#process">Как подключиться</a></li>
+                                <li><a href="#reviews">Отзывы</a></li>
+                                <li><a href="#faq">Частые вопросы</a></li>
+                                <li><a href="#" onclick="openChat()">ИИ-Консультант</a></li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Контакты -->
+                    <div class="col-lg-4 col-md-6">
+                        <div class="footer-section">
+                            <h5 class="footer-title">📞 Контакты</h5>
+                            <div class="footer-contacts">
+                                <div class="contact-item">
+                                    <div class="contact-icon">📍</div>
+                                    <div class="contact-info">
+                                        <strong>Адрес офиса</strong>
+                                        <span>г. Пенза, ул. Калинина 128А к2</span>
+                                        <small>Ежедневно с 9:00 до 18:00</small>
+                                    </div>
+                                </div>
+                                <div class="contact-item">
+                                    <div class="contact-icon">📱</div>
+                                    <div class="contact-info">
+                                        <strong>Телефон</strong>
+                                        <a href="tel:+79273748151">+7 (927) 374-81-51</a>
+                                        <small>Круглосуточно</small>
+                                    </div>
+                                </div>
+                                <div class="contact-item">
+                                    <div class="contact-icon">🤖</div>
+                                    <div class="contact-info">
+                                        <strong>ИИ-Консультант</strong>
+                                        <small>Доступен 24/7</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Нижняя часть -->
+            <div class="footer-bottom">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <p class="footer-copyright">
+                            &copy; 2025 <strong>ILPO-TAXI</strong> • Умный Таксопарк
+                            <span class="footer-badge">🤖 AI-POWERED</span>
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="footer-legal">
+                            <a href="#">Политика конфиденциальности</a>
+                            <a href="#">Пользовательское соглашение</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Chat Widget -->
+    <div class="chat-widget" id="chatWidget">
+        <div class="chat-header">
+            <div class="chat-avatar">🤖</div>
+            <div class="chat-info">
+                <h5>ИИ-Консультант</h5>
+                <span class="chat-status">Онлайн</span>
+            </div>
+            <button class="chat-close" onclick="closeChat()">&times;</button>
+        </div>
+        <div class="chat-body" id="chatBody">
+            <div class="chat-message ai-message">
+                <div class="message-content">
+                    Привет! Я ИИ-консультант ИЛПО-ТАКСИ. Помогу с подключением к сервисам Яндекс: Такси, Доставка или устроиться Курьером. Что вас интересует?
+                </div>
+                <div class="message-time">Сейчас</div>
+            </div>
+        </div>
+        <div class="chat-input">
+            <div class="input-group">
+                <input type="text" class="form-control" id="chatInput" placeholder="Напишите ваш вопрос...">
+                <button class="btn btn-primary" onclick="sendMessage()">
+                    <span>📤</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat Toggle Button -->
+    <button class="chat-toggle" id="chatToggle" onclick="openChat()">
+        <span class="chat-icon">💬</span>
+        <span class="chat-text">ИИ-Консультант</span>
+    </button>
+
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Swiper JS -->
+    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+
+    <!-- Custom JS -->
+    <script src="static/js/calculator.js"></script>
+    <script src="static/js/main.js"></script>
+</body>
+
+</html>
