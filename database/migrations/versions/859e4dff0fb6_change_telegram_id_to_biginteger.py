@@ -17,6 +17,27 @@ depends_on = None
 
 
 def upgrade() -> None:
+    # Create managers table first (referenced by applications)
+    op.create_table('managers',
+        sa.Column('id', sa.Integer(), nullable=False),
+        sa.Column('telegram_id', sa.BigInteger(), nullable=False, comment='Telegram ID менеджера'),
+        sa.Column('username', sa.String(length=100), nullable=True, comment='Telegram username'),
+        sa.Column('first_name', sa.String(length=100), nullable=False, comment='Имя'),
+        sa.Column('last_name', sa.String(length=100), nullable=True, comment='Фамилия'),
+        sa.Column('status', sa.Enum('ONLINE', 'BUSY', 'OFFLINE', name='managerstatus'), nullable=True, comment='Статус менеджера'),
+        sa.Column('is_active', sa.Boolean(), nullable=True, comment='Активен ли менеджер'),
+        sa.Column('is_admin', sa.Boolean(), nullable=True, comment='Является ли администратором'),
+        sa.Column('max_active_chats', sa.Integer(), nullable=True, comment='Максимум активных чатов'),
+        sa.Column('total_applications', sa.Integer(), nullable=True, comment='Всего обработано заявок'),
+        sa.Column('avg_response_time', sa.Integer(), nullable=True, comment='Среднее время ответа в секундах'),
+        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True, comment='Время регистрации'),
+        sa.Column('last_seen', sa.DateTime(timezone=True), nullable=True, comment='Последняя активность'),
+        sa.PrimaryKeyConstraint('id'),
+        sa.UniqueConstraint('telegram_id'),
+        comment='Модель менеджера поддержки'
+    )
+    op.create_index(op.f('ix_managers_id'), 'managers', ['id'], unique=False)
+
     # Create applications table
     op.create_table('applications',
         sa.Column('id', sa.Integer(), nullable=False),
@@ -41,26 +62,7 @@ def upgrade() -> None:
     )
     op.create_index(op.f('ix_applications_id'), 'applications', ['id'], unique=False)
 
-    # Create managers table
-    op.create_table('managers',
-        sa.Column('id', sa.Integer(), nullable=False),
-        sa.Column('telegram_id', sa.BigInteger(), nullable=False, comment='Telegram ID менеджера'),
-        sa.Column('username', sa.String(length=100), nullable=True, comment='Telegram username'),
-        sa.Column('first_name', sa.String(length=100), nullable=False, comment='Имя'),
-        sa.Column('last_name', sa.String(length=100), nullable=True, comment='Фамилия'),
-        sa.Column('status', sa.Enum('ONLINE', 'BUSY', 'OFFLINE', name='managerstatus'), nullable=True, comment='Статус менеджера'),
-        sa.Column('is_active', sa.Boolean(), nullable=True, comment='Активен ли менеджер'),
-        sa.Column('is_admin', sa.Boolean(), nullable=True, comment='Является ли администратором'),
-        sa.Column('max_active_chats', sa.Integer(), nullable=True, comment='Максимум активных чатов'),
-        sa.Column('total_applications', sa.Integer(), nullable=True, comment='Всего обработано заявок'),
-        sa.Column('avg_response_time', sa.Integer(), nullable=True, comment='Среднее время ответа в секундах'),
-        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True, comment='Время регистрации'),
-        sa.Column('last_seen', sa.DateTime(timezone=True), nullable=True, comment='Последняя активность'),
-        sa.PrimaryKeyConstraint('id'),
-        sa.UniqueConstraint('telegram_id'),
-        comment='Модель менеджера поддержки'
-    )
-    op.create_index(op.f('ix_managers_id'), 'managers', ['id'], unique=False)
+
 
     # Create support_chats table
     op.create_table('support_chats',
@@ -147,12 +149,12 @@ def downgrade() -> None:
     op.drop_index('idx_applications_created', table_name='applications')
     op.drop_index('idx_applications_status', table_name='applications')
     
-    # Drop tables
+    # Drop tables in reverse order (tables with foreign keys first)
     op.drop_table('manager_work_sessions')
     op.drop_table('chat_messages')
     op.drop_table('support_chats')
+    op.drop_table('applications')  # Drop applications before managers (has FK to managers)
     op.drop_table('managers')
-    op.drop_table('applications')
     
     # Drop enums
     op.execute('DROP TYPE IF EXISTS applicationstatus CASCADE')
