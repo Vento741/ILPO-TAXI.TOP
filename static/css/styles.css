@@ -216,7 +216,7 @@ body {
 }
 
 .header-nav.scrolled .glitch-subtitle {
-    font-size: 0.6rem;
+    font-size: 1.0rem;
     opacity: 0.7;
     letter-spacing: 1px;
 }
@@ -478,21 +478,36 @@ h6[id] {
     position: relative;
     z-index: 10;
     width: 100%;
+    padding-top: 4rem;
+    padding-bottom: 4rem;
+    min-height: calc(100vh - 120px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+
+/* Hero Header Styles */
+
+.hero-header {
+    max-width: 1500px;
+    margin: 0 auto 4rem auto;
+    padding: 0 1rem;
 }
 
 .hero-title {
     font-size: clamp(2.8rem, 6vw, 4.2rem);
     font-weight: 700;
     color: var(--yandex-white);
-    line-height: 1.1;
+    line-height: 1.2;
     margin-bottom: 2rem;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.044), 0 8px 16px rgba(0, 0, 0, 0.044), 0 16px 32px rgba(0, 0, 0, 0.044);
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3), 0 8px 16px rgba(0, 0, 0, 0.2), 0 16px 32px rgba(0, 0, 0, 0.1);
     animation: heroTitleAppear 1.2s cubic-bezier(0.4, 0, 0.2, 1) both;
     position: relative;
 }
 
 .hero-title .text-primary {
-    background: linear-gradient(135deg, var(--yandex-yellow) 0%, #FFE066 100%);
+    background: linear-gradient(135deg, #FFEE70 0%, #FFD000 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -508,7 +523,7 @@ h6[id] {
     left: 0;
     right: 0;
     bottom: 0;
-    background: linear-gradient(135deg, var(--yandex-yellow) 0%, #ffdb49 100%, var(--yandex-yellow-dark) 100%);
+    background: linear-gradient(135deg, #FFFF99 0%, #FFEE70 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -526,18 +541,17 @@ h6[id] {
     background: linear-gradient(135deg, var(--yandex-yellow) 0%, #FFE066 50%, var(--yandex-yellow-dark) 100%);
     border-radius: 3px;
     animation: expandWidth 1.8s cubic-bezier(0.4, 0, 0.2, 1) 0.6s both;
-    box-shadow: 0 2px 8px rgba(255, 219, 77, 0.4);
+    box-shadow: 0 2px 8px rgba(255, 219, 75, 0.438);
 }
 
 .hero-subtitle {
-    font-size: 1.2rem;
-    color: rgba(255, 255, 255, 0.95);
+    font-size: clamp(1.1rem, 2.5vw, 1.3rem);
+    color: rgba(255, 255, 255, 0.9);
     font-weight: 500;
-    max-width: 650px;
-    line-height: 1.7;
-    margin-bottom: 2.5rem;
+    line-height: 1.6;
+    margin-bottom: 0;
     animation: heroSubtitleAppear 1.2s cubic-bezier(0.4, 0, 0.2, 1) 0.3s both;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
     position: relative;
 }
 
@@ -550,102 +564,156 @@ h6[id] {
     position: relative;
 }
 
-.hero-form-card {
-    background: rgba(255, 255, 255, 0.98);
-    backdrop-filter: blur(15px);
-    border-radius: 20px;
-    padding: 3rem;
-    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15), 0 15px 35px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-    margin-top: 2rem;
+
+/* Hero Cards Grid */
+
+.hero-cards-grid {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.hero-cards-grid .row {
+    margin-bottom: 3rem;
+}
+
+
+/* Signup Promo Card */
+
+.signup-promo-card {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%), rgba(33, 32, 31, 0.9);
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+    border-radius: 24px;
+    padding: 2rem;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3), 0 10px 25px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1);
     border: 2px solid rgba(255, 219, 77, 0.4);
+    color: var(--yandex-white);
     animation: heroFormAppear 1.2s cubic-bezier(0.4, 0, 0.2, 1) 0.6s both;
     position: relative;
     overflow: hidden;
-    transform-style: preserve-3d;
-}
-
-.hero-form-card::before {
-    content: '';
-    position: absolute;
-    top: -2px;
-    left: -2px;
-    right: -2px;
-    bottom: -2px;
-    background: linear-gradient(135deg, var(--yandex-yellow), #FFE066, var(--yandex-yellow-dark), var(--yandex-yellow));
-    border-radius: 20px;
-    z-index: -1;
-    opacity: 0;
-    animation: borderGlow 4s ease-in-out infinite;
-}
-
-.hero-form-card::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 219, 77, 0.15), transparent);
-    transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-    z-index: 1;
+    display: flex;
+    flex-direction: column;
 }
 
-.hero-form-card:hover::after {
-    left: 100%;
-}
-
-.hero-form-card:hover {
-    transform: translateY(-8px) rotateX(2deg);
-    box-shadow: 0 35px 70px rgba(0, 0, 0, 0.2), 0 25px 50px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+.signup-promo-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4), 0 15px 35px rgba(255, 219, 77, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2);
     border-color: var(--yandex-yellow);
 }
 
-.hero-form-card h3 {
-    color: var(--yandex-black);
-    font-weight: 700;
+.signup-promo-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
     margin-bottom: 1.5rem;
-    position: relative;
 }
 
-.hero-form-card .form-control,
-.hero-form-card .form-select {
-    border-radius: var(--border-radius-sm);
-    border: 2px solid rgba(229, 229, 229, 0.8);
-    padding: 1rem 1.25rem;
-    font-size: 1rem;
-    transition: var(--transition);
-    background: rgba(255, 255, 255, 0.9);
-    backdrop-filter: blur(5px);
+.signup-promo-header .promo-icon {
+    font-size: 2rem;
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(135deg, var(--yandex-yellow) 0%, var(--yandex-yellow-dark) 100%);
+    color: var(--yandex-black);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 15px rgba(255, 219, 77, 0.3);
+    flex-shrink: 0;
 }
 
-.hero-form-card .form-control:focus,
-.hero-form-card .form-select:focus {
-    border-color: var(--yandex-yellow);
-    box-shadow: 0 0 0 0.3rem rgba(255, 219, 77, 0.15);
-    background: var(--yandex-white);
-    transform: translateY(-2px);
+.signup-promo-header h3 {
+    font-weight: 700;
+    font-size: 1.5rem;
+    margin: 0;
+}
+
+.signup-promo-card .promo-text {
+    color: rgba(255, 255, 255, 0.8);
+    line-height: 1.6;
+    margin-bottom: 1.5rem;
+}
+
+.signup-promo-card .promo-benefits {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 2rem 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.signup-promo-card .promo-benefits li {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.95rem;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.signup-promo-card .promo-benefits .fas {
+    color: var(--yandex-yellow);
+    font-size: 1.2em;
+    width: 20px;
+    text-align: center;
+}
+
+.signup-promo-card .signup-promo-btn {
+    font-weight: 700;
+    font-size: 1.2rem;
+    padding: 1rem;
+    box-shadow: 0 8px 25px rgba(255, 219, 77, 0.4);
+    animation: pulseGlow 2s ease-in-out infinite;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+}
+
+.signup-promo-card .signup-promo-btn:hover {
+    box-shadow: 0 12px 35px rgba(255, 219, 77, 0.5);
+}
+
+.signup-promo-card .promo-footer {
+    text-align: center;
+    margin-top: 1.5rem;
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
 }
 
 
 /* AI Promo Card */
 
 .ai-promo-card {
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 100%), rgba(255, 219, 77, 0.05);
-    backdrop-filter: blur(20px);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%), rgba(255, 219, 77, 0.08);
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
     border-radius: 24px;
-    padding: 3rem;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15), 0 10px 25px rgba(255, 219, 77, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2);
-    display: flex;
-    align-items: center;
-    gap: 2.5rem;
-    margin-top: 3rem;
-    border: 2px solid rgba(255, 219, 77, 0.4);
-    transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    padding: 2rem;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3), 0 10px 25px rgba(255, 219, 77, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 219, 77, 0.5);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     overflow: hidden;
     animation: aiCardAppear 1.2s cubic-bezier(0.4, 0, 0.2, 1) 0.9s both;
     z-index: 10;
-    transform-style: preserve-3d;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.ai-card-content {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    text-align: center;
+    align-items: center;
 }
 
 .ai-promo-card::before {
@@ -666,25 +734,26 @@ h6[id] {
 }
 
 .ai-promo-card:hover {
-    transform: translateY(-12px) rotateY(2deg) rotateX(1deg);
-    box-shadow: 0 35px 70px rgba(0, 0, 0, 0.2), 0 15px 35px rgba(255, 219, 77, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    transform: translateY(-8px);
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4), 0 15px 35px rgba(255, 219, 77, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
     border-color: var(--yandex-yellow);
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.1) 100%), rgba(255, 219, 77, 0.08);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.08) 100%), rgba(255, 219, 77, 0.12);
 }
 
 .ai-avatar {
-    width: 100px;
-    height: 100px;
+    width: 80px;
+    height: 80px;
     background: linear-gradient(135deg, var(--yandex-yellow) 0%, #FFE066 50%, var(--yandex-yellow-dark) 100%);
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 2.5rem;
+    font-size: 2rem;
     flex-shrink: 0;
     position: relative;
-    box-shadow: 0 8px 25px rgba(255, 219, 77, 0.3);
+    box-shadow: 0 8px 25px rgba(255, 219, 77, 0.4);
     animation: aiPulse 2s ease-in-out infinite;
+    margin-bottom: 1.5rem;
 }
 
 .ai-avatar::after {
@@ -699,24 +768,90 @@ h6[id] {
     animation: aiRing 3s linear infinite;
 }
 
+.ai-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
 .ai-content h4 {
     color: var(--yandex-white);
-    margin-bottom: 0.75rem;
+    margin-bottom: 1rem;
     font-weight: 700;
-    font-size: 1.5rem;
+    font-size: 1.4rem;
 }
 
 .ai-content p {
-    color: rgba(255, 255, 255, 0.8);
+    color: rgba(255, 255, 255, 0.85);
     margin-bottom: 1.5rem;
+    font-size: 1rem;
+    line-height: 1.5;
+}
+
+.ai-features {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    margin-bottom: 2rem;
+}
+
+.ai-feature-item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.ai-feature-item .feature-icon {
     font-size: 1.1rem;
-    line-height: 1.6;
+    color: var(--yandex-yellow);
 }
 
 .ai-content .btn {
     position: relative;
     z-index: 20;
-    /* Кнопка должна быть выше всего */
+    margin-top: auto;
+}
+
+
+/* Hero Stats Row */
+
+.hero-stats-row {
+    margin-top: 2rem;
+}
+
+.hero-stat-item {
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(20px);
+    border-radius: 16px;
+    border: 1px solid rgba(255, 219, 77, 0.3);
+    transition: all 0.3s ease;
+    color: var(--yandex-white);
+}
+
+.hero-stat-item:hover {
+    transform: translateY(-5px);
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 219, 77, 0.5);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+}
+
+.hero-stat-item .stat-number {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--yandex-yellow);
+    margin-bottom: 0.3rem;
+    text-shadow: 0 2px 4px rgba(255, 219, 77, 0.3);
+}
+
+.hero-stat-item .stat-label {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.8);
+    font-weight: 500;
 }
 
 
@@ -725,7 +860,7 @@ h6[id] {
    ============================================================================= */
 
 .benefits-modern {
-    background: linear-gradient(135deg, #fafafa 0%, #ffffff 50%, #f8f9fa 100%);
+    background: linear-gradient(135deg, #fde5e5a6 0%, #f3f8f8c0 50%, #ffffffce 100%);
     position: relative;
     overflow: hidden;
 }
@@ -761,14 +896,22 @@ h6[id] {
 
 .section-badge {
     display: inline-block;
-    padding: 0.5rem 1rem;
+    padding: 0.5rem 0.33rem;
     background: linear-gradient(135deg, var(--yandex-yellow) 0%, var(--yandex-yellow-dark) 100%);
     color: var(--yandex-black);
     border-radius: 50px;
-    font-size: 0.9rem;
-    font-weight: 600;
+    font-size: 1.1rem;
+    font-weight: 500;
     margin-bottom: 1rem;
     box-shadow: 0 4px 12px rgba(255, 219, 77, 0.3);
+    text-align: center;
+    justify-content: center;
+    display: flex;
+    margin-left: auto;
+    margin-right: auto;
+    min-width: 25%;
+    width: fit-content;
+    max-width: 25%;
 }
 
 .benefits-title {
@@ -2188,47 +2331,6 @@ p {
 
 /* Статистика отзывов */
 
-.reviews-stats {
-    background: var(--yandex-white);
-    border-radius: var(--border-radius-lg);
-    padding: 2rem;
-    box-shadow: 0 8px 30px rgba(33, 32, 31, 0.08);
-    border: 2px solid rgba(255, 219, 77, 0.2);
-}
-
-.reviews-stats .stat-item {
-    text-align: center;
-    padding: 1.5rem;
-    background: rgba(248, 249, 250, 0.5);
-    border-radius: var(--border-radius);
-    transition: var(--transition);
-    border: 1px solid rgba(229, 229, 229, 0.5);
-}
-
-.reviews-stats .stat-item:hover {
-    transform: translateY(-3px);
-    background: var(--yandex-white);
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-}
-
-.reviews-stats .stat-number {
-    font-size: 2.5rem;
-    font-weight: 700;
-    color: var(--yandex-yellow);
-    margin-bottom: 0.5rem;
-    text-shadow: 0 2px 4px rgba(255, 219, 77, 0.3);
-}
-
-.reviews-stats .stat-number .percentage {
-    font-size: 1.5rem;
-}
-
-.reviews-stats .stat-label {
-    font-size: 0.9rem;
-    color: var(--yandex-gray);
-    font-weight: 500;
-}
-
 
 /* =============================================================================
    FAQ СЕКЦИЯ
@@ -3080,6 +3182,7 @@ p {
 .chat-status {
     color: var(--yandex-gray);
     font-size: 0.85rem;
+    margin-right: 80px;
 }
 
 .chat-close {
@@ -3371,73 +3474,120 @@ p {
     /* =============================================================================
        HERO SECTION - EXTRA SMALL MOBILE
        ============================================================================= */
-    .hero {
-        padding: 40px 0;
-        min-height: calc(100vh - 60px);
+    .hero .container {
+        padding-top: 2rem;
+        padding-bottom: 2rem;
+        min-height: calc(100vh - 80px);
+    }
+    .hero-header {
+        margin-bottom: 2.5rem;
+        padding: 0 0.5rem;
     }
     .hero-title {
         font-size: 1.8rem;
-        text-align: center;
         margin-bottom: 1rem;
         line-height: 1.1;
     }
     .hero-subtitle {
-        text-align: center;
         font-size: 0.95rem;
-        margin-bottom: 1.5rem;
         line-height: 1.5;
         padding: 0 0.5rem;
     }
-    .hero-form-card {
-        margin-top: 1rem;
-        padding: 1.2rem;
-        border-radius: 16px;
+    .hero-cards-grid .row {
+        margin-bottom: 2rem;
     }
-    .hero-form-card h3 {
-        font-size: 1.1rem;
-        margin-bottom: 1rem;
+    .signup-promo-card {
+        padding: 1.5rem;
+        margin: 0 0.5rem 1.5rem;
+        border-radius: 20px;
+    }
+    .signup-promo-header {
+        flex-direction: column;
         text-align: center;
+        gap: 0.8rem;
+        margin-bottom: 1.2rem;
     }
-    .hero-form-card .form-control,
-    .hero-form-card .form-select {
-        padding: 0.8rem 1rem;
+    .signup-promo-header .promo-icon {
+        width: 50px;
+        height: 50px;
+        font-size: 1.5rem;
+        margin: 0 auto;
+    }
+    .signup-promo-header h3 {
+        font-size: 1.2rem;
+        margin: 0;
+    }
+    .promo-text {
         font-size: 0.9rem;
-        margin-bottom: 0.8rem;
+        text-align: center;
+        margin-bottom: 1.2rem;
     }
-    .hero-form-card .btn {
-        width: 100%;
+    .promo-benefits {
+        margin-bottom: 1.5rem;
+    }
+    .promo-benefits li {
+        font-size: 0.85rem;
+        justify-content: center;
+    }
+    .signup-promo-btn {
+        font-size: 1rem;
         padding: 0.8rem;
-        font-size: 0.9rem;
-        font-weight: 600;
+    }
+    .promo-footer {
+        font-size: 0.8rem;
+        margin-top: 1rem;
     }
     /* AI Promo Card для очень маленьких экранов */
     .ai-promo-card {
-        flex-direction: column;
-        text-align: center;
-        padding: 1.2rem;
-        gap: 1rem;
-        margin-top: 1.5rem;
+        padding: 1.5rem;
+        margin: 0 0.5rem;
         border-radius: 20px;
+    }
+    .ai-card-content {
+        text-align: center;
     }
     .ai-avatar {
         width: 60px;
         height: 60px;
         font-size: 1.5rem;
-        margin: 0 auto;
+        margin: 0 auto 1rem;
     }
     .ai-content h4 {
         font-size: 1.1rem;
-        margin-bottom: 0.5rem;
+        margin-bottom: 0.8rem;
     }
     .ai-content p {
         font-size: 0.9rem;
         margin-bottom: 1rem;
         line-height: 1.5;
     }
+    .ai-features {
+        margin-bottom: 1.5rem;
+        gap: 0.6rem;
+    }
+    .ai-feature-item {
+        font-size: 0.8rem;
+    }
     .ai-content .btn {
-        width: 100%;
-        padding: 0.7rem;
-        font-size: 0.85rem;
+        padding: 0.8rem;
+        font-size: 0.9rem;
+    }
+    /* Hero Stats для мобильных */
+    .hero-stats-row {
+        margin-top: 1.5rem;
+        padding: 0 0.5rem;
+    }
+    .hero-stat-item {
+        padding: 0.8rem;
+        margin-bottom: 0.8rem;
+        border-radius: 12px;
+    }
+    .hero-stat-item .stat-number {
+        font-size: 1.2rem;
+        margin-bottom: 0.2rem;
+    }
+    .hero-stat-item .stat-label {
+        font-size: 0.75rem;
     }
     /* =============================================================================
        BENEFITS SECTION - EXTRA SMALL MOBILE
@@ -3882,26 +4032,6 @@ p {
         font-size: 0.75rem;
         padding: 0.4rem;
         text-align: center;
-    }
-    /* Статистика отзывов */
-    .reviews-stats {
-        padding: 1.5rem;
-        margin: 0 0.5rem;
-        border-radius: 16px;
-    }
-    .reviews-stats .stat-item {
-        padding: 1rem;
-        margin-bottom: 0.8rem;
-    }
-    .reviews-stats .stat-number {
-        font-size: 2rem;
-        margin-bottom: 0.3rem;
-    }
-    .reviews-stats .stat-number .percentage {
-        font-size: 1.2rem;
-    }
-    .reviews-stats .stat-label {
-        font-size: 0.8rem;
     }
     /* =============================================================================
        FAQ SECTION - EXTRA SMALL MOBILE
@@ -4373,10 +4503,6 @@ p {
         font-size: 1.1rem;
         margin-bottom: 2rem;
     }
-    .hero-form-card {
-        margin-top: 1.5rem;
-        padding: 1.5rem;
-    }
     .ai-promo-card {
         flex-direction: column;
         text-align: center;
@@ -4532,9 +4658,6 @@ p {
         flex-direction: column;
         gap: 0.5rem;
     }
-    .reviews-stats .stat-number {
-        font-size: 2rem;
-    }
     /* FAQ mobile */
     .faq-question {
         padding: 1rem 1.5rem;
@@ -4618,8 +4741,43 @@ p {
 /* Планшеты */
 
 @media (min-width: 768px) and (max-width: 1199.98px) {
+    /* Hero Section - Tablets */
+    .hero .container {
+        padding-top: 3rem;
+        padding-bottom: 3rem;
+    }
+    .hero-header {
+        margin-bottom: 3rem;
+        max-width: 800px;
+    }
     .hero-title {
         font-size: 2.5rem;
+    }
+    .hero-subtitle {
+        font-size: 1.15rem;
+    }
+    .hero-cards-grid {
+        max-width: 900px;
+    }
+    .signup-promo-card,
+    .ai-promo-card {
+        padding: 1.8rem;
+    }
+    .signup-promo-header .promo-icon {
+        width: 55px;
+        height: 55px;
+        font-size: 1.8rem;
+    }
+    .ai-avatar {
+        width: 70px;
+        height: 70px;
+        font-size: 1.8rem;
+    }
+    .hero-stat-item {
+        padding: 1.2rem;
+    }
+    .hero-stat-item .stat-number {
+        font-size: 1.6rem;
     }
     .benefits-stats {
         gap: 1.5rem;
@@ -4719,17 +4877,14 @@ p {
     0% {
         opacity: 0;
         transform: translateY(60px) scale(0.9);
-        filter: blur(10px);
     }
     50% {
         opacity: 0.7;
         transform: translateY(20px) scale(0.95);
-        filter: blur(2px);
     }
     100% {
         opacity: 1;
         transform: translateY(0) scale(1);
-        filter: blur(0);
     }
 }
 
@@ -4737,12 +4892,10 @@ p {
     0% {
         opacity: 0;
         transform: translateY(40px) translateX(-20px);
-        filter: blur(5px);
     }
     100% {
         opacity: 1;
         transform: translateY(0) translateX(0);
-        filter: blur(0);
     }
 }
 
@@ -4750,12 +4903,10 @@ p {
     0% {
         opacity: 0;
         transform: translateY(50px) rotateX(-15deg) scale(0.9);
-        filter: blur(8px);
     }
     100% {
         opacity: 1;
         transform: translateY(0) rotateX(0deg) scale(1);
-        filter: blur(0);
     }
 }
 
@@ -4795,17 +4946,14 @@ p {
     0% {
         opacity: 0;
         transform: translateY(60px) rotateY(-15deg) scale(0.8);
-        filter: blur(10px);
     }
     50% {
         opacity: 0.7;
         transform: translateY(20px) rotateY(-5deg) scale(0.9);
-        filter: blur(3px);
     }
     100% {
         opacity: 1;
         transform: translateY(0) rotateY(0deg) scale(1);
-        filter: blur(0);
     }
 }
 
