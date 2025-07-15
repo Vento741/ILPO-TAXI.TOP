@@ -17,8 +17,12 @@ async def create_manager_from_settings():
         try:
             # Создаем менеджеров для всех ID из настроек
             for telegram_id in settings.MANAGER_IDS:
-                # Проверяем, не существует ли уже
-                existing = await session.get(Manager, telegram_id)
+                # Проверяем, не существует ли уже (ищем по telegram_id, а не по id)
+                from sqlalchemy import select
+                result = await session.execute(
+                    select(Manager).where(Manager.telegram_id == telegram_id)
+                )
+                existing = result.scalar_one_or_none()
                 if existing:
                     print(f"✅ Менеджер {telegram_id} уже существует")
                     continue
