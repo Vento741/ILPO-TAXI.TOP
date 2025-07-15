@@ -59,8 +59,12 @@ async def create_dispatcher() -> Dispatcher:
     dp.include_router(application_router)
     logger.info("✅ Application router подключен")
     
-    # Показываем зарегистрированные обработчики
-    logger.info(f"📊 Всего обработчиков в диспетчере: {len(dp._router.message.handlers)}")
+    # Показываем зарегистрированные обработчики  
+    try:
+        handler_count = len(dp.message.handlers) if hasattr(dp, 'message') else "неизвестно"
+        logger.info(f"📊 Всего обработчиков в диспетчере: {handler_count}")
+    except Exception as e:
+        logger.info(f"📊 Не удалось подсчитать обработчики: {e}")
     
     logger.info("✅ Диспетчер создан и настроен")
     return dp
