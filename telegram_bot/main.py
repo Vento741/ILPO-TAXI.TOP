@@ -53,8 +53,14 @@ async def create_dispatcher() -> Dispatcher:
     dp = Dispatcher(storage=storage)
     
     # Подключаем роутеры
+    logger.info("📋 Подключение роутеров...")
     dp.include_router(base_router)
+    logger.info("✅ Base router подключен")
     dp.include_router(application_router)
+    logger.info("✅ Application router подключен")
+    
+    # Показываем зарегистрированные обработчики
+    logger.info(f"📊 Всего обработчиков в диспетчере: {len(dp._router.message.handlers)}")
     
     logger.info("✅ Диспетчер создан и настроен")
     return dp
@@ -120,6 +126,10 @@ async def set_bot_commands():
     
     await bot.set_my_commands(commands)
     logger.info("✅ Команды бота установлены")
+    
+    # Проверяем, какие команды установлены
+    installed_commands = await bot.get_my_commands()
+    logger.info(f"📋 Установленные команды: {[cmd.command for cmd in installed_commands]}")
 
 async def notify_admins_startup():
     """Уведомление админов о запуске бота"""

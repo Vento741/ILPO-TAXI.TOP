@@ -18,6 +18,12 @@ logger = logging.getLogger(__name__)
 # Создаем роутер для заявок
 application_router = Router()
 
+# Тестовая команда для отладки
+@application_router.message(Command("test"))
+async def cmd_test(message: Message):
+    """Тестовая команда для отладки"""
+    await message.answer("🧪 Тестовая команда работает! Application router активен.")
+
 @application_router.message(Command("applications"))
 async def cmd_applications(message: Message):
     """Показать список заявок менеджера"""
