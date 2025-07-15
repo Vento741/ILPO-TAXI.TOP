@@ -138,6 +138,11 @@ async def set_bot_commands():
         BotCommand(command="offline", description="🔴 Завершить рабочую смену"),
         BotCommand(command="stats", description="📊 Статистика работы"),
         BotCommand(command="applications", description="📋 Мои заявки"),
+        BotCommand(command="chats", description="💬 Активные чаты"),
+        BotCommand(command="status", description="⚙️ Изменить статус"),
+        BotCommand(command="admin", description="👑 Панель администратора"),
+        BotCommand(command="managers", description="👥 Управление менеджерами"),
+        BotCommand(command="reports", description="📈 Отчеты и аналитика"),
         BotCommand(command="help", description="❓ Справка по командам"),
     ]
     
