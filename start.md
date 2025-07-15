@@ -532,14 +532,40 @@ sudo journalctl -u ilpo-taxi-bot --since "1 hour ago"
 
 #### Проблемы с БД:
 ```bash
-# Проверяем подключение
-sudo -u postgres psql -d ilpo_taxi -c "SELECT version();"
+# Проверяем подключение к PostgreSQL
+sudo -u postgres psql -d ilpo_taxi_db -c "SELECT version();"
 
 # Проверяем таблицы
-sudo -u postgres psql -d ilpo_taxi -c "\dt"
+sudo -u postgres psql -d ilpo_taxi_db -c "\dt"
 
-# Применяем миграции заново
+# Если таблиц нет - создаем их
+python telegram_bot/init_db.py
+
+# Или применяем миграции заново
 alembic upgrade head
+```
+
+#### Заявки не приходят в Telegram:
+```bash
+# 1. Проверяем логи основного приложения
+sudo journalctl -u ilpo-taxi -f | grep "заявка"
+
+# 2. Проверяем статус бота
+sudo systemctl status ilpo-taxi-bot
+
+# 3. Проверяем подключение к БД
+python telegram_bot/init_db.py
+
+# 4. Перезапускаем бота
+sudo systemctl restart ilpo-taxi-bot
+
+# 5. Тестируем интеграцию с Telegram ботом
+python telegram_bot/test_integration.py
+
+# 6. Или прямой тест API
+curl -X POST http://localhost/api/signup \
+  -H "Content-Type: application/json" \
+  -d '{"fullName":"Тест","phone":"+79991234567","age":"25","city":"Тест","category":"driver","experience":"5"}'
 ```
 
 #### Проблемы с Redis:
@@ -552,6 +578,30 @@ redis-cli ping
 
 # Очистка кэша (осторожно!)
 redis-cli flushall
+```
+
+---
+
+## 🚨 БЫСТРОЕ ИСПРАВЛЕНИЕ ПРОБЛЕМЫ С ЗАЯВКАМИ
+
+```bash
+# СРОЧНЫЙ ФИКС - выполните по порядку:
+
+# 1. На СЕРВЕРЕ - инициализируем БД
+cd /var/www/ILPO-TAXI.TOP
+source venv/bin/activate
+python telegram_bot/init_db.py
+
+# 2. Перезапускаем Telegram бота
+sudo systemctl restart ilpo-taxi-bot
+
+# 3. Проверяем работу
+python telegram_bot/test_integration.py
+
+# 4. Если всё работает - применяем к коду на сервере:
+git add .
+git commit -m "fix: исправлены JavaScript ошибки и интеграция с Telegram ботом"
+git push origin main
 ```
 
 ---
@@ -572,10 +622,13 @@ pip install -r requirements.txt
 # 3. Применяем миграции БД (если есть)
 alembic upgrade head
 
-# 4. Перезапускаем все сервисы
+# 4. Инициализируем БД (если нужно)
+python telegram_bot/init_db.py
+
+# 5. Перезапускаем все сервисы
 sudo systemctl restart postgresql redis nginx ilpo-taxi ilpo-taxi-bot
 
-# 5. Проверяем статусы
+# 6. Проверяем статусы
 sudo systemctl status postgresql redis nginx ilpo-taxi ilpo-taxi-bot
 ```
 

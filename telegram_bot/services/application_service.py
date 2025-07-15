@@ -28,19 +28,34 @@ class ApplicationService:
         """Создать заявку из данных API сайта"""
         async with AsyncSessionLocal() as session:
             try:
+                logger.info(f"📝 Создание заявки из данных: {application_data}")
+                
+                # Проверяем обязательные поля
+                full_name = application_data.get("fullName", "")
+                phone = application_data.get("phone", "")
+                age = application_data.get("age")
+                city = application_data.get("city", "")
+                category = application_data.get("category", "")
+                
+                if not all([full_name, phone, age, city, category]):
+                    logger.error(f"❌ Отсутствуют обязательные поля: full_name={full_name}, phone={phone}, age={age}, city={city}, category={category}")
+                    return None
+                
                 # Создаем новую заявку
                 new_application = Application(
-                    full_name=application_data.get("fullName", ""),
-                    phone=application_data.get("phone", ""),
-                    age=application_data.get("age"),
-                    city=application_data.get("city", ""),
-                    category=application_data.get("category", ""),
+                    full_name=full_name,
+                    phone=phone,
+                    age=int(age) if age else None,
+                    city=city,
+                    category=category,
                     experience=application_data.get("experience"),
                     transport=application_data.get("transport"),
                     load_capacity=application_data.get("loadCapacity"),
                     additional_info=self._format_additional_info(application_data),
                     status=ApplicationStatus.NEW
                 )
+                
+                logger.info(f"📝 Объект заявки создан: {new_application}")
                 
                 session.add(new_application)
                 await session.commit()
@@ -57,6 +72,8 @@ class ApplicationService:
             except Exception as e:
                 await session.rollback()
                 logger.error(f"❌ Ошибка создания заявки: {e}")
+                import traceback
+                logger.error(f"Полная ошибка: {traceback.format_exc()}")
                 return None
     
     def _format_additional_info(self, data: Dict) -> str:
