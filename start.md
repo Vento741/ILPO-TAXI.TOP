@@ -26,6 +26,9 @@ git add .
 git commit -m "Описание изменений"
 git push origin main
 ```
+# ОСТОРОЖНО! Это удалит все локальные изменения
+git reset --hard HEAD
+git pull origin main
 
 ### 2. Обновление на сервере
 ```bash
