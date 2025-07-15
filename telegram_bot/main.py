@@ -52,6 +52,17 @@ async def create_dispatcher() -> Dispatcher:
     # Создаем диспетчер
     dp = Dispatcher(storage=storage)
     
+    logger.info("✅ Диспетчер создан")
+    return dp
+
+async def setup_routers():
+    """Настройка роутеров"""
+    global dp
+    
+    if dp is None:
+        logger.error("❌ Диспетчер не инициализирован!")
+        return
+    
     # Подключаем роутеры
     logger.info("📋 Подключение роутеров...")
     dp.include_router(base_router)
@@ -66,8 +77,7 @@ async def create_dispatcher() -> Dispatcher:
     except Exception as e:
         logger.info(f"📊 Не удалось подсчитать обработчики: {e}")
     
-    logger.info("✅ Диспетчер создан и настроен")
-    return dp
+    logger.info("✅ Роутеры настроены")
 
 async def on_startup():
     """Действия при запуске бота"""
@@ -85,6 +95,9 @@ async def on_startup():
         # Подключаемся к Redis
         await redis_service.connect()
         logger.info("✅ Redis подключен")
+        
+        # Настраиваем роутеры
+        await setup_routers()
         
         # Устанавливаем команды бота
         await set_bot_commands()
