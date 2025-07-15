@@ -185,7 +185,7 @@ async def callback_application_action(callback: CallbackQuery):
                     """
                     
                     keyboard = InlineKeyboardMarkup(inline_keyboard=[
-                        [InlineKeyboardButton(text=f"📞 Позвонить {application.phone}", url=f"tel:{application.phone}")],
+                        [InlineKeyboardButton(text=f"📞 {application.phone}", callback_data=f"phone_{application.id}")],
                         [InlineKeyboardButton(text="◀️ Назад к заявке", callback_data=f"app_details_{app_id}")]
                     ])
                     

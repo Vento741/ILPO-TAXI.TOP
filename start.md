@@ -560,12 +560,27 @@ python telegram_bot/init_db.py
 sudo systemctl restart ilpo-taxi-bot
 
 # 5. Тестируем интеграцию с Telegram ботом
-python telegram_bot/test_integration.py
+cd /var/www/ILPO-TAXI.TOP
+python -m telegram_bot.test_integration
 
 # 6. Или прямой тест API
 curl -X POST http://localhost/api/signup \
   -H "Content-Type: application/json" \
   -d '{"fullName":"Тест","phone":"+79991234567","age":"25","city":"Тест","category":"driver","experience":"5"}'
+```
+
+#### Настройка админов и менеджеров:
+```bash
+# 1. Узнайте свой Telegram ID через @userinfobot
+# 2. Отредактируйте .env файл
+nano .env
+
+# 3. Замените в секции ADMIN_IDS:
+# ADMIN_IDS=ВАШ_РЕАЛЬНЫЙ_TELEGRAM_ID,ДРУГОЙ_ADMIN_ID
+# Например: ADMIN_IDS=5161187711,1234567890
+
+# 4. Перезапустите бота
+sudo systemctl restart ilpo-taxi-bot
 ```
 
 #### Проблемы с Redis:
@@ -587,21 +602,24 @@ redis-cli flushall
 ```bash
 # СРОЧНЫЙ ФИКС - выполните по порядку:
 
-# 1. На СЕРВЕРЕ - инициализируем БД
+# 1. На СЕРВЕРЕ - обновляем код и инициализируем БД
 cd /var/www/ILPO-TAXI.TOP
 source venv/bin/activate
-python telegram_bot/init_db.py
+git pull origin main
+sudo systemctl restart ilpo-taxi
 
-# 2. Перезапускаем Telegram бота
+# 2. Настраиваем админов в .env (замените на свой Telegram ID)
+# Узнайте ID через @userinfobot в Telegram
+nano .env
+# Измените строку: ADMIN_IDS=ВАШ_РЕАЛЬНЫЙ_ID,5161187711
+
+# 3. Перезапускаем Telegram бота
 sudo systemctl restart ilpo-taxi-bot
 
-# 3. Проверяем работу
-python telegram_bot/test_integration.py
+# 4. Проверяем работу
+python -m telegram_bot.test_integration
 
-# 4. Если всё работает - применяем к коду на сервере:
-git add .
-git commit -m "fix: исправлены JavaScript ошибки и интеграция с Telegram ботом"
-git push origin main
+# 5. Тестируем на сайте - заявка должна дойти до админов!
 ```
 
 ---
