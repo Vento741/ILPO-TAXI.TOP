@@ -4,6 +4,8 @@
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
 from telegram_bot.config.settings import settings
+from contextlib import asynccontextmanager
+from typing import AsyncGenerator
 import logging
 
 logger = logging.getLogger(__name__)
@@ -29,7 +31,8 @@ AsyncSessionLocal = async_sessionmaker(
     expire_on_commit=False
 )
 
-async def get_db_session() -> AsyncSession:
+@asynccontextmanager
+async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
     """Получить сессию базы данных"""
     async with AsyncSessionLocal() as session:
         try:
@@ -38,8 +41,6 @@ async def get_db_session() -> AsyncSession:
             logger.error(f"Database session error: {e}")
             await session.rollback()
             raise
-        finally:
-            await session.close()
 
 async def init_db():
     """Инициализация базы данных"""
