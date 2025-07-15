@@ -37,10 +37,10 @@ class Settings(BaseSettings):
     FASTAPI_URL: str = os.getenv("FASTAPI_URL", "http://localhost:8000")
     API_SECRET_KEY: str = os.getenv("API_SECRET_KEY", "your-secret-key")
     
-    # Admin Users (Telegram IDs)
-    ADMIN_IDS: List[int] = []
-    MANAGER_IDS: List[int] = []
-    
+        # Admin Users (Telegram IDs) - строки, будут парситься в списки
+    ADMIN_IDS_STR: str = os.getenv("ADMIN_IDS", "")
+    MANAGER_IDS_STR: str = os.getenv("MANAGER_IDS", "")
+
     # Business Logic
     AUTO_ASSIGN_MANAGERS: bool = True
     MAX_ACTIVE_CHATS_PER_MANAGER: int = 5
@@ -49,14 +49,19 @@ class Settings(BaseSettings):
     # Notifications
     NOTIFICATION_CHAT_ID: int = 0  # ID чата для уведомлений админов
 
-    @field_validator('ADMIN_IDS', 'MANAGER_IDS', mode='before')
-    @classmethod
-    def parse_comma_separated_ids(cls, v: object) -> object:
-        if isinstance(v, str):
-            if not v:
-                return []
-            return [int(x.strip()) for x in v.split(',') if x.strip()]
-        return v
+    @property
+    def ADMIN_IDS(self) -> List[int]:
+        """Парсит ADMIN_IDS из строки в список int"""
+        if not self.ADMIN_IDS_STR:
+            return []
+        return [int(x.strip()) for x in self.ADMIN_IDS_STR.split(',') if x.strip()]
+    
+    @property
+    def MANAGER_IDS(self) -> List[int]:
+        """Парсит MANAGER_IDS из строки в список int"""
+        if not self.MANAGER_IDS_STR:
+            return []
+        return [int(x.strip()) for x in self.MANAGER_IDS_STR.split(',') if x.strip()]
 
 # Создаем экземпляр настроек
 settings = Settings()
