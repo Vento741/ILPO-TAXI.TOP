@@ -22,7 +22,7 @@ application_router = Router()
 async def cmd_applications(message: Message):
     """Показать список заявок менеджера"""
     user = message.from_user
-    telegram_id = str(user.id)
+    telegram_id = int(user.id)
     
     try:
         manager = await manager_service.get_manager_by_telegram_id(telegram_id)
@@ -65,7 +65,7 @@ async def cmd_applications(message: Message):
 async def callback_new_applications(callback: CallbackQuery):
     """Показать новые заявки"""
     user = callback.from_user
-    telegram_id = str(user.id)
+    telegram_id = int(user.id)
     
     try:
         manager = await manager_service.get_manager_by_telegram_id(telegram_id)
@@ -107,7 +107,7 @@ async def callback_application_action(callback: CallbackQuery):
     app_id = int(data[2])
     
     user = callback.from_user
-    telegram_id = str(user.id)
+    telegram_id = int(user.id)
     
     try:
         manager = await manager_service.get_manager_by_telegram_id(telegram_id)

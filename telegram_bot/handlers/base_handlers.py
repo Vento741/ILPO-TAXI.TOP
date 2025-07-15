@@ -32,7 +32,7 @@ class ManagerStates(StatesGroup):
 async def cmd_start(message: Message, state: FSMContext):
     """Обработчик команды /start"""
     user = message.from_user
-    telegram_id = str(user.id)
+    telegram_id = int(user.id)
     
     try:
         # Проверяем, является ли пользователь менеджером
@@ -40,10 +40,10 @@ async def cmd_start(message: Message, state: FSMContext):
         
         if not manager:
             # Если не менеджер, проверяем, можно ли зарегистрировать
-            if telegram_id in [str(uid) for uid in settings.MANAGER_IDS] or \
-               telegram_id in [str(uid) for uid in settings.ADMIN_IDS]:
+            if telegram_id in settings.MANAGER_IDS or \
+               telegram_id in settings.ADMIN_IDS:
                 # Регистрируем как менеджера
-                is_admin = telegram_id in [str(uid) for uid in settings.ADMIN_IDS]
+                is_admin = telegram_id in settings.ADMIN_IDS
                 manager = await manager_service.register_manager(
                     telegram_id=telegram_id,
                     username=user.username or "",
@@ -117,7 +117,7 @@ async def cmd_start(message: Message, state: FSMContext):
 async def cmd_online(message: Message, state: FSMContext):
     """Перевести менеджера в онлайн"""
     user = message.from_user
-    telegram_id = str(user.id)
+    telegram_id = int(user.id)
     
     try:
         manager = await manager_service.get_manager_by_telegram_id(telegram_id)
@@ -148,7 +148,7 @@ async def cmd_online(message: Message, state: FSMContext):
 async def cmd_offline(message: Message, state: FSMContext):
     """Перевести менеджера в офлайн"""
     user = message.from_user
-    telegram_id = str(user.id)
+    telegram_id = int(user.id)
     
     try:
         manager = await manager_service.get_manager_by_telegram_id(telegram_id)
@@ -157,7 +157,7 @@ async def cmd_offline(message: Message, state: FSMContext):
             return
         
         # Проверяем активные чаты
-        active_chats = await redis_service.get_manager_active_chats(telegram_id)
+        active_chats = await redis_service.get_manager_active_chats(str(telegram_id))
         
         if active_chats:
             keyboard = InlineKeyboardMarkup(inline_keyboard=[
@@ -195,7 +195,7 @@ async def cmd_offline(message: Message, state: FSMContext):
 async def cmd_stats(message: Message):
     """Показать статистику менеджера"""
     user = message.from_user
-    telegram_id = str(user.id)
+    telegram_id = int(user.id)
     
     try:
         manager = await manager_service.get_manager_by_telegram_id(telegram_id)
@@ -237,7 +237,7 @@ async def cmd_stats(message: Message):
 async def cmd_help(message: Message):
     """Показать справку по командам"""
     user = message.from_user
-    telegram_id = str(user.id)
+    telegram_id = int(user.id)
     
     manager = await manager_service.get_manager_by_telegram_id(telegram_id)
     if not manager:
@@ -285,7 +285,7 @@ async def cmd_help(message: Message):
 async def callback_confirm_offline(callback: CallbackQuery, state: FSMContext):
     """Подтверждение завершения смены"""
     user = callback.from_user
-    telegram_id = str(user.id)
+    telegram_id = int(user.id)
     
     try:
         manager = await manager_service.get_manager_by_telegram_id(telegram_id)
@@ -357,7 +357,7 @@ def get_stats_keyboard() -> InlineKeyboardMarkup:
 async def handle_unknown_message(message: Message):
     """Обработчик неизвестных сообщений"""
     user = message.from_user
-    telegram_id = str(user.id)
+    telegram_id = int(user.id)
     
     manager = await manager_service.get_manager_by_telegram_id(telegram_id)
     if not manager:

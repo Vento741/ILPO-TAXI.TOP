@@ -115,7 +115,7 @@ class ManagerService:
                 manager.last_seen = datetime.utcnow()
                 
                 # Обновляем статус в Redis
-                await redis_service.set_manager_status(telegram_id, status.value)
+                await redis_service.set_manager_status(str(telegram_id), status.value)
                 
                 await session.commit()
                 logger.info(f"✅ Статус менеджера {manager.first_name} изменен на {status.value}")
@@ -153,7 +153,7 @@ class ManagerService:
                 min_chats = float('inf')
                 
                 for manager in managers:
-                    active_chats = await redis_service.get_manager_active_chats(manager.telegram_id)
+                    active_chats = await redis_service.get_manager_active_chats(str(manager.telegram_id))
                     active_count = len(active_chats)
                     
                     # Проверяем лимит активных чатов
@@ -314,7 +314,7 @@ class ManagerService:
                 manager.last_seen = datetime.utcnow()
                 
                 # Очищаем активные чаты в Redis
-                await redis_service.set_manager_active_chats(telegram_id, [])
+                await redis_service.set_manager_active_chats(str(telegram_id), [])
                 
                 await session.commit()
                 
@@ -338,7 +338,7 @@ class ManagerService:
                     return None
                 
                 # Активные чаты
-                active_chats = await redis_service.get_manager_active_chats(telegram_id)
+                active_chats = await redis_service.get_manager_active_chats(str(telegram_id))
                 
                 # Заявки за сегодня
                 today = datetime.utcnow().date()

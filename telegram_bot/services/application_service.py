@@ -88,7 +88,7 @@ class ApplicationService:
             logger.error(f"❌ Ошибка автоназначения заявки: {e}")
             return False
     
-    async def notify_manager_about_new_application(self, manager_telegram_id: str, application_id: int):
+    async def notify_manager_about_new_application(self, manager_telegram_id: int, application_id: int):
         """Уведомить менеджера о новой заявке через Telegram"""
         try:
             from aiogram import Bot
