@@ -164,6 +164,13 @@ function connectWebSocket() {
 function handleWebSocketMessage(data) {
     console.log('📨 Получено сообщение:', data);
 
+    // Отладочная информация для длинных сообщений
+    if (data.content && data.content.length > 1000) {
+        console.log(`🔍 Получено длинное сообщение: ${data.content.length} символов`);
+        console.log(`🔍 Первые 200 символов:`, data.content.substring(0, 200));
+        console.log(`🔍 Последние 200 символов:`, data.content.substring(data.content.length - 200));
+    }
+
     switch (data.type) {
         case 'ai_message':
             hideTypingIndicator();
@@ -324,6 +331,15 @@ function addMessage(content, sender, metadata = {}) {
         const convertedHTML = convertMarkdownToHTML(content);
         console.log('🔄 Конвертированный HTML:', convertedHTML);
         messageContent.innerHTML = convertedHTML;
+
+        // Проверяем, не было ли сообщение обрезано
+        if (content.includes('[Сообщение сокращено]')) {
+            console.log('⚠️ Обнаружено сокращенное сообщение');
+            const warningDiv = document.createElement('div');
+            warningDiv.style.cssText = 'margin-top: 10px; padding: 8px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; font-size: 0.9em; color: #856404;';
+            warningDiv.innerHTML = '⚠️ Сообщение было сокращено из-за большого размера';
+            messageContent.appendChild(warningDiv);
+        }
     } else {
         messageContent.textContent = content;
     }

@@ -42,6 +42,12 @@ class ConnectionManager:
         # Создаем или получаем сессию
         if not session_id:
             session_id = await chat_manager.create_session()
+        else:
+            # Проверяем, существует ли сессия с данным ID
+            existing_session = await chat_manager.get_session(session_id)
+            if not existing_session:
+                print(f"⚠️ Сессия {session_id} не найдена, создаем новую")
+                session_id = await chat_manager.create_session()
         
         self.active_connections[session_id] = websocket
         self.connection_sessions[websocket] = session_id
@@ -168,6 +174,13 @@ async def websocket_chat(websocket: WebSocket, session_id: str = Query(None)):
                 "session_id": session_id
             }
             
+            # Отладочная информация для длинных сообщений
+            content_length = len(ai_response_data["content"])
+            print(f"📤 Отправляем ответ: {content_length} символов")
+            if content_length > 1000:
+                print(f"🔍 Первые 200 символов: {ai_response_data['content'][:200]}...")
+                print(f"🔍 Последние 200 символов: ...{ai_response_data['content'][-200:]}")
+            
             # Добавляем ответ ИИ в историю
             await chat_manager.add_message(
                 session_id, 
@@ -179,7 +192,18 @@ async def websocket_chat(websocket: WebSocket, session_id: str = Query(None)):
             )
             
             # Отправляем ответ пользователю
-            await manager.send_personal_message(json.dumps(response_message), websocket)
+            try:
+                json_message = json.dumps(response_message, ensure_ascii=False)
+                print(f"📡 Размер JSON сообщения: {len(json_message)} байт")
+                await manager.send_personal_message(json_message, websocket)
+                print("✅ Сообщение успешно отправлено через WebSocket")
+            except Exception as send_error:
+                print(f"❌ Ошибка отправки WebSocket сообщения: {send_error}")
+                # Попробуем отправить сокращенную версию
+                short_content = ai_response_data["content"][:1000] + "...\n\n[Сообщение сокращено]"
+                short_response = response_message.copy()
+                short_response["content"] = short_content
+                await manager.send_personal_message(json.dumps(short_response, ensure_ascii=False), websocket)
             
     except WebSocketDisconnect:
         print(f"📱 Пользователь отключился от сессии {session_id}")

@@ -183,53 +183,94 @@ sudo nano /etc/nginx/sites-available/ilpo-taxi
 
 Содержимое файла:
 ```nginx
+# Сначала делаем резервную копию
+sudo cp /etc/nginx/sites-available/ilpo-taxi /etc/nginx/sites-available/ilpo-taxi.backup
+
+# Заменяем конфигурацию с учетом IP-адреса
+sudo tee /etc/nginx/sites-available/ilpo-taxi > /dev/null << 'EOF'
+# HTTP сервер - редирект на HTTPS
 server {
     listen 80;
-    server_name ilpo-taxi.top www.ilpo-taxi.top;
+    server_name ilpo-taxi.top www.ilpo-taxi.top 81.177.6.46;
 
     # Редирект на HTTPS
     return 301 https://$server_name$request_uri;
 }
 
+# HTTPS сервер - основная конфигурация
 server {
     listen 443 ssl http2;
-    server_name ilpo-taxi.top www.ilpo-taxi.top;
+    server_name ilpo-taxi.top www.ilpo-taxi.top 81.177.6.46;
 
-    # SSL сертификаты (настройте Let's Encrypt)
+    # SSL сертификаты (будем настраивать Let's Encrypt позже)
     ssl_certificate /etc/letsencrypt/live/ilpo-taxi.top/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/ilpo-taxi.top/privkey.pem;
 
-    # Основное приложение
+    # SSL настройки безопасности
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers ECDHE-RSA-AES256-GCM-SHA512:DHE-RSA-AES256-GCM-SHA512:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES256-GCM-SHA384;
+    ssl_prefer_server_ciphers off;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 10m;
+
+    # Основное приложение FastAPI
     location / {
         proxy_pass http://127.0.0.1:8000;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_buffering off;
+        proxy_request_buffering off;
     }
 
-    # Webhook для Telegram
+    # Webhook для Telegram бота
     location /webhook/telegram {
         proxy_pass http://127.0.0.1:8000/webhook/telegram;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_buffering off;
+        proxy_request_buffering off;
     }
 
-    # Статические файлы
+    # Статические файлы (CSS, JS, изображения)
     location /static/ {
-        alias /var/www/ilpo-taxi/static/;
+        alias /var/www/ILPO-TAXI.TOP/static/;
         expires 1y;
         add_header Cache-Control "public, immutable";
+        
+        # Настройки для статических файлов
+        location ~* \.(css|js|png|jpg|jpeg|gif|ico|svg)$ {
+            expires 1y;
+            add_header Cache-Control "public, immutable";
+        }
     }
 
-    # Загруженные файлы
+    # Uploaded files (if any)
     location /uploads/ {
-        alias /var/www/ilpo-taxi/uploads/;
+        alias /var/www/ILPO-TAXI.TOP/uploads/;
         expires 1y;
+        add_header Cache-Control "public, immutable";
+        
+        # Disable execution of scripts
+        location ~* \.(php|pl|py|jsp|asp|sh|cgi)$ {
+            deny all;
+        }
     }
+
+    # Disable nginx version
+    server_tokens off;
+    
+    # Default security headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "no-referrer-when-downgrade" always;
+    add_header Content-Security-Policy "default-src 'self' http: https: data: blob: 'unsafe-inline'" always;
 }
+EOF
 ```
 
 ### 4. Активация конфигурации Nginx
