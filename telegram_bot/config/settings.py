@@ -4,7 +4,7 @@
 import os
 from typing import List
 from pydantic_settings import BaseSettings
-from pydantic import validator
+from pydantic import field_validator
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -48,20 +48,15 @@ class Settings(BaseSettings):
     
     # Notifications
     NOTIFICATION_CHAT_ID: int = 0  # ID чата для уведомлений админов
-    
-    @validator('ADMIN_IDS', pre=True)
-    def parse_admin_ids(cls, v):
-        if isinstance(v, str):
-            return [int(x.strip()) for x in v.split(',') if x.strip()]
-        return v or []
-    
-    @validator('MANAGER_IDS', pre=True)
-    def parse_manager_ids(cls, v):
-        if isinstance(v, str):
-            return [int(x.strip()) for x in v.split(',') if x.strip()]
-        return v or []
-    
 
+    @field_validator('ADMIN_IDS', 'MANAGER_IDS', mode='before')
+    @classmethod
+    def parse_comma_separated_ids(cls, v: object) -> object:
+        if isinstance(v, str):
+            if not v:
+                return []
+            return [int(x.strip()) for x in v.split(',') if x.strip()]
+        return v
 
 # Создаем экземпляр настроек
 settings = Settings()
