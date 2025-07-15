@@ -575,12 +575,34 @@ curl -X POST http://localhost/api/signup \
 # 2. Отредактируйте .env файл
 nano .env
 
-# 3. Замените в секции ADMIN_IDS:
-# ADMIN_IDS=ВАШ_РЕАЛЬНЫЙ_TELEGRAM_ID,ДРУГОЙ_ADMIN_ID
-# Например: ADMIN_IDS=5161187711,1234567890
+# 3. Замените в секции ADMIN_IDS и MANAGER_IDS:
+# ADMIN_IDS=ВАШ_РЕАЛЬНЫЙ_TELEGRAM_ID
+# MANAGER_IDS=ВАШ_РЕАЛЬНЫЙ_TELEGRAM_ID
+# Например: ADMIN_IDS=5161187711 и MANAGER_IDS=5161187711
 
-# 4. Перезапустите бота
+# 4. Проверьте настройки
+python telegram_bot/check_settings.py
+
+# 5. Создайте запись менеджера в БД
+python telegram_bot/create_manager.py
+
+# 6. Перезапустите бота
 sudo systemctl restart ilpo-taxi-bot
+
+# 7. Проверьте команды в Telegram - отправьте /start боту
+```
+
+#### Если команды не работают:
+```bash
+# 1. Проверьте логи бота
+sudo journalctl -u ilpo-taxi-bot -n 50
+
+# 2. Проверьте, что роутеры подключены
+grep -n "include_router" telegram_bot/main.py
+
+# 3. Перезапустите с чистыми логами
+sudo systemctl restart ilpo-taxi-bot
+sudo journalctl -u ilpo-taxi-bot -f
 ```
 
 #### Проблемы с Redis:
