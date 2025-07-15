@@ -5236,6 +5236,35 @@ p {
     top: 50%;
     transform: translateY(-50%);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    min-width: 80px;
+    text-align: center;
+}
+
+.chat-status:hover {
+    background: rgba(255, 255, 255, 1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.chat-status.reconnecting {
+    animation: pulse 1.5s infinite;
+    background: linear-gradient(135deg, #FFF9E6 0%, #FFFBF0 100%);
+    border: 1px solid var(--yandex-yellow);
+}
+
+@keyframes pulse {
+    0% {
+        transform: translateY(-50%) scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: translateY(-50%) scale(1.05);
+        opacity: 0.8;
+    }
+    100% {
+        transform: translateY(-50%) scale(1);
+        opacity: 1;
+    }
 }
 
 

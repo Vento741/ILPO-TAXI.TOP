@@ -115,7 +115,7 @@
                                 <li><i class="fas fa-tachometer-alt"></i> Самое быстрое подключение в отрасли</li>
                                 <li><i class="fas fa-robot"></i> Круглосуточный ИИ-помощник на каждом этапе</li>
                             </ul>
-                            <a href="templates/signup.html" class="btn btn-primary btn-lg w-100 signup-promo-btn">
+                            <a href="/signup" class="btn btn-primary btn-lg w-100 signup-promo-btn">
                                 <i class="fas fa-rocket"></i> Начать регистрацию
                             </a>
                             <div class="promo-footer">
@@ -1141,9 +1141,9 @@
                         <div class="footer-section">
                             <h5 class="footer-title">🚗 Услуги</h5>
                             <ul class="footer-links">
-                                <li><a href="templates/signup.html">Яндекс.Такси</a></li>
-                                <li><a href="templates/signup.html">Яндекс.Доставка</a></li>
-                                <li><a href="templates/signup.html">Работа курьером</a></li>
+                                <li><a href="/signup">Яндекс.Такси</a></li>
+                                <li><a href="/signup">Яндекс.Доставка</a></li>
+                                <li><a href="/signup">Работа курьером</a></li>
                                 <li><a href="#calculator">Калькулятор заработка</a></li>
                             </ul>
                         </div>
@@ -1234,6 +1234,11 @@
                 </div>
                 <div class="message-time">Сейчас</div>
             </div>
+        </div>
+        <div class="chat-actions">
+            <button class="btn btn-outline-warning btn-sm" id="transferToManagerBtn" onclick="requestManagerTransfer()" style="margin: 10px; width: calc(100% - 20px);">
+                👤 Связаться с живым менеджером
+            </button>
         </div>
         <div class="chat-input">
             <div class="input-group">

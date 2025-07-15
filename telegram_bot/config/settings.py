@@ -1,0 +1,83 @@
+"""
+Конфигурация Telegram-бота поддержки ILPO-TAXI
+"""
+import os
+from typing import List
+from pydantic_settings import BaseSettings
+from pydantic import validator
+from dotenv import load_dotenv
+
+load_dotenv()
+
+class Settings(BaseSettings):
+    """Настройки приложения"""
+    model_config = {"extra": "allow", "env_file": ".env", "case_sensitive": True}
+    
+    # Telegram Bot
+    TELEGRAM_BOT_TOKEN: str = os.getenv("TELEGRAM_BOT_TOKEN", "")
+    TELEGRAM_WEBHOOK_URL: str = os.getenv("TELEGRAM_WEBHOOK_URL", "")
+    TELEGRAM_WEBHOOK_SECRET: str = os.getenv("TELEGRAM_WEBHOOK_SECRET", "")
+    
+    # Database
+    DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql+asyncpg://user:password@localhost:5432/ilpo_taxi")
+    DATABASE_HOST: str = os.getenv("DATABASE_HOST", "localhost")
+    DATABASE_PORT: int = int(os.getenv("DATABASE_PORT", "5432"))
+    DATABASE_NAME: str = os.getenv("DATABASE_NAME", "ilpo_taxi")
+    DATABASE_USER: str = os.getenv("DATABASE_USER", "postgres")
+    DATABASE_PASSWORD: str = os.getenv("DATABASE_PASSWORD", "")
+    
+    # Redis
+    REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379")
+    REDIS_HOST: str = os.getenv("REDIS_HOST", "localhost")
+    REDIS_PORT: int = int(os.getenv("REDIS_PORT", "6379"))
+    REDIS_DB: int = int(os.getenv("REDIS_DB", "0"))
+    REDIS_PASSWORD: str = os.getenv("REDIS_PASSWORD", "")
+    
+    # FastAPI Integration
+    FASTAPI_URL: str = os.getenv("FASTAPI_URL", "http://localhost:8000")
+    API_SECRET_KEY: str = os.getenv("API_SECRET_KEY", "your-secret-key")
+    
+    # Admin Users (Telegram IDs)
+    ADMIN_IDS: List[int] = []
+    MANAGER_IDS: List[int] = []
+    
+    # Business Logic
+    AUTO_ASSIGN_MANAGERS: bool = True
+    MAX_ACTIVE_CHATS_PER_MANAGER: int = 5
+    MANAGER_RESPONSE_TIME_LIMIT: int = 300  # 5 минут
+    
+    # Notifications
+    NOTIFICATION_CHAT_ID: int = 0  # ID чата для уведомлений админов
+    
+    @validator('ADMIN_IDS', pre=True)
+    def parse_admin_ids(cls, v):
+        if isinstance(v, str):
+            return [int(x.strip()) for x in v.split(',') if x.strip()]
+        return v or []
+    
+    @validator('MANAGER_IDS', pre=True)
+    def parse_manager_ids(cls, v):
+        if isinstance(v, str):
+            return [int(x.strip()) for x in v.split(',') if x.strip()]
+        return v or []
+    
+
+
+# Создаем экземпляр настроек
+settings = Settings()
+
+# Проверка обязательных настроек
+def validate_settings():
+    """Проверяет наличие обязательных настроек"""
+    required_settings = {
+        'TELEGRAM_BOT_TOKEN': settings.TELEGRAM_BOT_TOKEN,
+        'DATABASE_URL': settings.DATABASE_URL,
+        'REDIS_URL': settings.REDIS_URL,
+    }
+    
+    missing = [key for key, value in required_settings.items() if not value]
+    
+    if missing:
+        raise ValueError(f"Missing required environment variables: {', '.join(missing)}")
+    
+    return True 

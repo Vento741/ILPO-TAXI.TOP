@@ -13,6 +13,9 @@ let websocket = null;
 let sessionId = null;
 let reconnectAttempts = 0;
 const maxReconnectAttempts = 5;
+let heartbeatInterval = null;
+let connectionCheckInterval = null;
+let lastHeartbeat = null;
 
 // Инициализация при загрузке страницы
 document.addEventListener('DOMContentLoaded', function() {
@@ -28,6 +31,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initScrollAnimations();
     initScrollToTop();
     initShrinkHeader();
+    initPageVisibilityHandling();
 
     console.log('🚀 ILPO-TAXI инициализирован с OpenRouter AI');
 });
@@ -102,6 +106,9 @@ function closeChat() {
     chatWidget.classList.remove('open');
     chatToggle.classList.remove('hidden');
 
+    // Не закрываем WebSocket при закрытии чата, но останавливаем heartbeat для экономии ресурсов
+    // stopHeartbeat();
+
     trackEvent('chat_closed');
 }
 
@@ -118,6 +125,7 @@ function connectWebSocket() {
         console.log('✅ WebSocket подключен');
         reconnectAttempts = 0;
         showConnectionStatus('connected');
+        startHeartbeat();
     };
 
     websocket.onmessage = function(event) {
@@ -128,20 +136,27 @@ function connectWebSocket() {
     websocket.onclose = function(event) {
         console.log('❌ WebSocket отключен:', event.code, event.reason);
         showConnectionStatus('disconnected');
+        stopHeartbeat();
 
-        // Пытаемся переподключиться
+        // Пытаемся переподключиться с экспоненциальной задержкой
         if (reconnectAttempts < maxReconnectAttempts) {
             reconnectAttempts++;
-            console.log(`🔄 Попытка переподключения ${reconnectAttempts}/${maxReconnectAttempts}`);
-            setTimeout(() => connectWebSocket(), 2000 * reconnectAttempts);
+            showConnectionStatus('reconnecting');
+            const delay = Math.min(2000 * Math.pow(2, reconnectAttempts - 1), 30000); // Максимум 30 секунд
+            console.log(`🔄 Попытка переподключения ${reconnectAttempts}/${maxReconnectAttempts} через ${delay/1000}с`);
+            setTimeout(() => connectWebSocket(), delay);
         } else {
-            showErrorMessage('Потеряно соединение с сервером. Перезагрузите страницу.');
+            console.log('💔 Превышено максимальное количество попыток переподключения');
+            showErrorMessage('Потеряно соединение с сервером. Попробуйте обновить страницу.');
+            // Предлагаем ручное переподключение
+            showReconnectButton();
         }
     };
 
     websocket.onerror = function(error) {
         console.error('❌ Ошибка WebSocket:', error);
         showConnectionStatus('error');
+        stopHeartbeat();
     };
 }
 
@@ -169,6 +184,12 @@ function handleWebSocketMessage(data) {
             showTypingIndicator();
             break;
 
+        case 'pong':
+            // Обновляем время последнего heartbeat
+            lastHeartbeat = Date.now();
+            console.log('💓 Heartbeat получен');
+            break;
+
         case 'error':
             hideTypingIndicator();
             showErrorMessage('Ошибка: ' + data.content);
@@ -177,6 +198,78 @@ function handleWebSocketMessage(data) {
         default:
             console.log('🤷 Неизвестный тип сообщения:', data.type);
     }
+}
+
+// Функции для поддержания соединения (heartbeat)
+function startHeartbeat() {
+    stopHeartbeat(); // Очищаем предыдущий интервал если есть
+
+    // Отправляем ping каждые 30 секунд
+    heartbeatInterval = setInterval(() => {
+        if (websocket && websocket.readyState === WebSocket.OPEN) {
+            websocket.send(JSON.stringify({
+                type: 'ping',
+                timestamp: new Date().toISOString()
+            }));
+            lastHeartbeat = Date.now();
+        }
+    }, 30000);
+
+    // Проверяем состояние соединения каждые 5 секунд
+    connectionCheckInterval = setInterval(() => {
+        checkConnection();
+    }, 5000);
+}
+
+function stopHeartbeat() {
+    if (heartbeatInterval) {
+        clearInterval(heartbeatInterval);
+        heartbeatInterval = null;
+    }
+    if (connectionCheckInterval) {
+        clearInterval(connectionCheckInterval);
+        connectionCheckInterval = null;
+    }
+}
+
+function checkConnection() {
+    if (!websocket) return;
+
+    // Если WebSocket в состоянии CONNECTING слишком долго
+    if (websocket.readyState === WebSocket.CONNECTING) {
+        const now = Date.now();
+        if (!lastHeartbeat || (now - lastHeartbeat) > 60000) { // 1 минута без ответа
+            console.log('⚠️ Соединение зависло, принудительно переподключаемся');
+            websocket.close();
+        }
+    }
+
+    // Если соединение закрыто, но мы этого не заметили
+    if (websocket.readyState === WebSocket.CLOSED && !reconnectAttempts) {
+        console.log('🔄 Обнаружено неожиданное отключение, переподключаемся');
+        connectWebSocket();
+    }
+}
+
+function showReconnectButton() {
+    const statusDiv = document.querySelector('.chat-status');
+    if (statusDiv) {
+        statusDiv.innerHTML = `
+            <span style="color: #FF9500; cursor: pointer;" onclick="forceReconnect()">
+                🟡 Соединение потеряно - нажмите для переподключения
+            </span>
+        `;
+    }
+}
+
+function forceReconnect() {
+    console.log('🔄 Принудительное переподключение по запросу пользователя');
+    reconnectAttempts = 0; // Сбрасываем счетчик
+    stopHeartbeat();
+    if (websocket) {
+        websocket.close();
+    }
+    connectWebSocket();
 }
 
 // Отправка сообщения через WebSocket
@@ -360,7 +453,8 @@ function showConnectionStatus(status) {
     const statusMap = {
         'connected': { text: 'Подключено к ИИ-консультанту', color: '#34C759', icon: '🟢' },
         'disconnected': { text: 'Соединение потеряно', color: '#FF9500', icon: '🟡' },
-        'error': { text: 'Ошибка соединения', color: '#FF3B30', icon: '🔴' }
+        'error': { text: 'Ошибка соединения', color: '#FF3B30', icon: '🔴' },
+        'reconnecting': { text: 'Переподключение...', color: '#007AFF', icon: '🔄' }
     };
 
     const statusInfo = statusMap[status];
@@ -368,7 +462,7 @@ function showConnectionStatus(status) {
 
     // Показываем статус в чате
     const statusDiv = document.querySelector('.chat-status') || document.createElement('div');
-    statusDiv.className = 'chat-status';
+    statusDiv.className = `chat-status ${status === 'reconnecting' ? 'reconnecting' : ''}`;
     statusDiv.innerHTML = `
         <span style="color: ${statusInfo.color}">
             ${statusInfo.icon} ${statusInfo.text}
@@ -386,7 +480,11 @@ function showConnectionStatus(status) {
     if (status === 'connected') {
         setTimeout(() => {
             statusDiv.style.opacity = '0';
-            setTimeout(() => statusDiv.remove(), 300);
+            setTimeout(() => {
+                if (statusDiv.parentNode) {
+                    statusDiv.remove();
+                }
+            }, 300);
         }, 3000);
     }
 }
@@ -730,6 +828,7 @@ function initializeNavigation() {
 window.openChat = openChat;
 window.closeChat = closeChat;
 window.sendMessage = sendMessage;
+window.forceReconnect = forceReconnect;
 
 /* =============================================================================
    НОВЫЕ ИНТЕРАКТИВНЫЕ ФУНКЦИИ ДЛЯ BENEFITS И PROCESS
@@ -1119,5 +1218,119 @@ const style = document.createElement('style');
 style.textContent = rippleCSS;
 document.head.appendChild(style);
 
+// Обработка видимости страницы для управления соединением
+function initPageVisibilityHandling() {
+    document.addEventListener('visibilitychange', function() {
+        if (document.hidden) {
+            // Страница скрыта - можем снизить частоту heartbeat
+            console.log('📱 Страница скрыта, снижаем активность heartbeat');
+        } else {
+            // Страница видима - проверяем соединение
+            console.log('📱 Страница видима, проверяем соединение');
+            if (websocket && websocket.readyState !== WebSocket.OPEN) {
+                console.log('🔄 Соединение потеряно пока страница была скрыта, переподключаемся');
+                connectWebSocket();
+            }
+        }
+    });
+}
+
 // Инициализация CTA кнопок
 document.addEventListener('DOMContentLoaded', initCTAButtons);
+
+// Функция переключения на живого менеджера
+async function requestManagerTransfer() {
+    const transferBtn = document.getElementById('transferToManagerBtn');
+
+    // Блокируем кнопку
+    transferBtn.disabled = true;
+    transferBtn.innerHTML = '⏳ Подключаем менеджера...';
+
+    try {
+        // Добавляем сообщение в чат
+        addMessage('Пожалуйста, подождите, подключаю живого менеджера...', 'system');
+
+        // Отправляем запрос на сервер
+        const response = await fetch('/api/chat/transfer-to-manager', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                session_id: sessionId,
+                chat_history: getChatHistory()
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            addMessage(
+                '👤 **Менеджер подключен!**\n\nСейчас с вами будет общаться живой специалист ILPO-TAXI. ' +
+                'Он поможет с любыми вопросами по подключению и работе.',
+                'system'
+            );
+
+            // Скрываем кнопку после успешного переключения
+            transferBtn.style.display = 'none';
+
+            // Обновляем статус чата
+            updateChatStatus('manager');
+
+        } else {
+            addMessage(
+                '😔 К сожалению, все менеджеры сейчас заняты. Попробуйте чуть позже или оставьте заявку на сайте.',
+                'system'
+            );
+
+            // Восстанавливаем кнопку
+            transferBtn.disabled = false;
+            transferBtn.innerHTML = '👤 Связаться с живым менеджером';
+        }
+
+    } catch (error) {
+        console.error('Ошибка переключения на менеджера:', error);
+        addMessage('❌ Произошла ошибка. Попробуйте позже.', 'system');
+
+        // Восстанавливаем кнопку
+        transferBtn.disabled = false;
+        transferBtn.innerHTML = '👤 Связаться с живым менеджером';
+    }
+}
+
+// Получить историю чата для передачи менеджеру
+function getChatHistory() {
+    const messages = [];
+    const chatMessages = document.querySelectorAll('.chat-message');
+
+    chatMessages.forEach(msg => {
+        const content = msg.querySelector('.message-content');
+        const time = msg.querySelector('.message-time');
+        const isAI = msg.classList.contains('ai-message');
+        const isUser = msg.classList.contains('user-message');
+
+        if (content && (isAI || isUser)) {
+            messages.push({
+                role: isUser ? 'user' : 'assistant',
+                content: content.textContent,
+                timestamp: time ? time.textContent : new Date().toLocaleTimeString()
+            });
+        }
+    });
+
+    return messages;
+}
+
+// Обновить статус чата
+function updateChatStatus(status) {
+    const chatHeader = document.querySelector('.chat-header .chat-info h5');
+    const chatStatus = document.querySelector('.chat-header .chat-info .chat-status');
+
+    if (status === 'manager') {
+        if (chatHeader) chatHeader.textContent = 'Менеджер ILPO-TAXI';
+        if (chatStatus) chatStatus.textContent = 'Онлайн';
+    } else {
+        if (chatHeader) chatHeader.textContent = 'ИИ-Консультант';
+        if (chatStatus) chatStatus.textContent = 'Онлайн';
+    }
+}

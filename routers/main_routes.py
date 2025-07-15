@@ -125,6 +125,22 @@ async def signup_application(request: Request):
         
         print(f"📋 Новая заявка на подключение ({category}): {application_data}")
         
+        # Интегрируем с Telegram ботом для отправки заявки менеджерам
+        try:
+            # Импортируем функцию обработки заявок
+            from telegram_bot.services.application_service import handle_new_application_from_site
+            
+            # Обрабатываем заявку через Telegram бот
+            bot_success = await handle_new_application_from_site(data)
+            
+            if bot_success:
+                print(f"✅ Заявка успешно отправлена менеджерам через Telegram бот")
+            else:
+                print(f"⚠️ Заявка сохранена локально (бот временно недоступен)")
+                
+        except Exception as e:
+            print(f"❌ Ошибка интеграции с Telegram ботом: {e}")
+        
         # Имитируем обработку заявки
         await asyncio.sleep(1)
         

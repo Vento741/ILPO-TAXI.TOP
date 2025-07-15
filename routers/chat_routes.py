@@ -5,14 +5,19 @@ WebSocket роутеры для ИИ-консультанта с OpenRouter API 
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException, Query
 from fastapi.responses import JSONResponse
+from datetime import datetime
+from typing import Dict
+from fastapi import Request
 import json
 import asyncio
-from datetime import datetime
-from typing import List, Dict, Any
+
 
 # Импорты наших сервисов
 from services.openrouter_ai import openrouter_ai
 from services.chat_manager import chat_manager
+
+import logging
+logger = logging.getLogger(__name__)
 
 # Создаем роутер для чата
 chat_router = APIRouter()
@@ -76,6 +81,10 @@ manager = ConnectionManager()
 async def websocket_chat(websocket: WebSocket, session_id: str = Query(None)):
     """WebSocket endpoint для чата с ИИ-консультантом"""
     
+    # Настройки для стабильности соединения
+    websocket.ping_timeout = 60  # Таймаут ping в секундах
+    websocket.ping_interval = 30  # Интервал ping в секундах
+    
     # Подключаемся и получаем session_id
     session_id = await manager.connect(websocket, session_id)
     
@@ -104,6 +113,21 @@ async def websocket_chat(websocket: WebSocket, session_id: str = Query(None)):
             data = await websocket.receive_text()
             message_data = json.loads(data)
             
+            message_type = message_data.get("type", "")
+            
+            # Обработка ping для поддержания соединения
+            if message_type == "ping":
+                pong_message = {
+                    "type": "pong",
+                    "timestamp": datetime.now().isoformat()
+                }
+                await manager.send_personal_message(json.dumps(pong_message), websocket)
+                continue
+            
+            # Обработка обычных сообщений
+            if message_type != "user_message":
+                continue
+                
             user_message = message_data.get("content", "").strip()
             if not user_message:
                 continue
@@ -160,9 +184,23 @@ async def websocket_chat(websocket: WebSocket, session_id: str = Query(None)):
     except WebSocketDisconnect:
         print(f"📱 Пользователь отключился от сессии {session_id}")
         manager.disconnect(websocket)
+    except ConnectionResetError:
+        print(f"🔌 Соединение сброшено для сессии {session_id}")
+        manager.disconnect(websocket)
     except Exception as e:
         print(f"❌ Ошибка WebSocket в сессии {session_id}: {e}")
-        manager.disconnect(websocket)
+        try:
+            # Пытаемся отправить сообщение об ошибке клиенту
+            error_message = {
+                "type": "error",
+                "content": "Произошла ошибка на сервере. Попробуйте переподключиться.",
+                "timestamp": datetime.now().isoformat()
+            }
+            await manager.send_personal_message(json.dumps(error_message), websocket)
+        except:
+            pass  # Если не удалось отправить, просто игнорируем
+        finally:
+            manager.disconnect(websocket)
 
 @chat_router.get("/api/chat/sessions/{session_id}/stats")
 async def get_session_stats(session_id: str):
@@ -234,6 +272,177 @@ async def chat_health_check():
                 "timestamp": datetime.now().isoformat()
             }
         )
+
+@chat_router.post("/api/chat/transfer-to-manager")
+async def transfer_to_manager(request: Request):
+    """Переключение веб-чата на живого менеджера"""
+    try:
+        data = await request.json()
+        session_id = data.get("session_id")
+        chat_history = data.get("chat_history", [])
+        client_name = data.get("client_name")
+        client_phone = data.get("client_phone")
+        
+        if not session_id:
+            return {"success": False, "error": "session_id обязательный"}
+        
+        # Импортируем сервис менеджеров
+        from telegram_bot.services.manager_service import manager_service
+        
+        # Создаем чат поддержки
+        support_chat = await manager_service.create_support_chat(
+            session_id=session_id,
+            chat_history=chat_history,
+            client_name=client_name,
+            client_phone=client_phone
+        )
+        
+        if not support_chat:
+            return {
+                "success": False,
+                "error": "Нет доступных менеджеров",
+                "message": "Все менеджеры заняты. Оставьте заявку на сайте, мы свяжемся с вами."
+            }
+        
+        # Получаем информацию о менеджере
+        manager = await manager_service.get_manager_by_telegram_id(support_chat.manager.telegram_id)
+        
+        # Отправляем уведомление менеджеру
+        await manager_service.notify_manager_new_chat(
+            manager_telegram_id=support_chat.manager.telegram_id,
+            chat=support_chat
+        )
+        
+        return {
+            "success": True,
+            "message": f"Вы переключены на менеджера {manager.first_name}. Ожидайте ответа.",
+            "chat_id": support_chat.chat_id,
+            "manager_name": f"{manager.first_name} {manager.last_name or ''}".strip()
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ Ошибка переключения на менеджера: {e}")
+        return {
+            "success": False,
+            "error": "Внутренняя ошибка сервера",
+            "message": "Произошла ошибка. Попробуйте позже."
+        }
+
+@chat_router.post("/api/chat/send-message")
+async def send_message_to_support(request: Request):
+    """Отправить сообщение в чат поддержки"""
+    try:
+        data = await request.json()
+        chat_id = data.get("chat_id")
+        message_text = data.get("message")
+        client_name = data.get("client_name", "Клиент")
+        
+        if not chat_id or not message_text:
+            return {"success": False, "error": "chat_id и message обязательные"}
+        
+        from telegram_bot.services.manager_service import manager_service
+        from telegram_bot.models.database import AsyncSessionLocal
+        from telegram_bot.models.support_models import SupportChat, ChatMessage
+        from sqlalchemy import select
+        from datetime import datetime
+        
+        async with AsyncSessionLocal() as session:
+            # Находим чат
+            result = await session.execute(
+                select(SupportChat).where(SupportChat.chat_id == chat_id)
+            )
+            support_chat = result.scalar_one_or_none()
+            
+            if not support_chat or not support_chat.is_active:
+                return {"success": False, "error": "Чат не найден или неактивен"}
+            
+            # Создаем новое сообщение
+            new_message = ChatMessage(
+                chat_id=support_chat.id,
+                sender_type="client",
+                sender_name=client_name,
+                message_text=message_text,
+                message_type="text",
+                created_at=datetime.utcnow()
+            )
+            
+            session.add(new_message)
+            
+            # Обновляем время последнего сообщения в чате
+            support_chat.last_message_at = datetime.utcnow()
+            
+            await session.commit()
+            
+            # TODO: Отправить уведомление менеджеру через Telegram
+            logger.info(f"📨 Новое сообщение в чате {chat_id} от клиента")
+            
+            return {"success": True, "message": "Сообщение отправлено"}
+        
+    except Exception as e:
+        logger.error(f"❌ Ошибка отправки сообщения: {e}")
+        return {
+            "success": False,
+            "error": "Внутренняя ошибка сервера"
+        }
+
+@chat_router.get("/api/chat/{chat_id}/messages")
+async def get_chat_messages(chat_id: str, limit: int = 50):
+    """Получить сообщения чата"""
+    try:
+        from telegram_bot.models.database import AsyncSessionLocal
+        from telegram_bot.models.support_models import SupportChat, ChatMessage
+        from sqlalchemy import select, desc
+        from sqlalchemy.orm import selectinload
+        
+        async with AsyncSessionLocal() as session:
+            # Находим чат с сообщениями
+            result = await session.execute(
+                select(SupportChat).options(
+                    selectinload(SupportChat.messages)
+                ).where(SupportChat.chat_id == chat_id)
+            )
+            support_chat = result.scalar_one_or_none()
+            
+            if not support_chat:
+                return {"success": False, "error": "Чат не найден"}
+            
+            # Получаем последние сообщения
+            messages_query = select(ChatMessage).where(
+                ChatMessage.chat_id == support_chat.id
+            ).order_by(desc(ChatMessage.created_at)).limit(limit)
+            
+            messages_result = await session.execute(messages_query)
+            messages = messages_result.scalars().all()
+            
+            # Форматируем сообщения
+            formatted_messages = []
+            for msg in reversed(messages):  # Показываем в хронологическом порядке
+                formatted_messages.append({
+                    "id": msg.id,
+                    "sender_type": msg.sender_type,
+                    "sender_name": msg.sender_name,
+                    "message": msg.message_text,
+                    "timestamp": msg.created_at.isoformat(),
+                    "is_read": msg.is_read
+                })
+            
+            return {
+                "success": True,
+                "messages": formatted_messages,
+                "chat_info": {
+                    "chat_id": support_chat.chat_id,
+                    "is_active": support_chat.is_active,
+                    "client_name": support_chat.client_name,
+                    "manager_id": support_chat.manager_id
+                }
+            }
+        
+    except Exception as e:
+        logger.error(f"❌ Ошибка получения сообщений: {e}")
+        return {
+            "success": False,
+            "error": "Внутренняя ошибка сервера"
+        }
 
 # Обработка завершения работы
 @chat_router.on_event("shutdown")
