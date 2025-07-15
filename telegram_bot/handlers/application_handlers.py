@@ -202,35 +202,244 @@ async def callback_my_applications(callback: CallbackQuery):
     """Показать мои заявки"""
     await cmd_applications(callback.message)
 
+# ДОБАВЛЯЮ НЕДОСТАЮЩИЕ ОБРАБОТЧИКИ ДЛЯ ЗАЯВОК:
+
+@application_router.callback_query(F.data == "in_progress_applications")
+async def callback_in_progress_applications(callback: CallbackQuery):
+    """Показать заявки в работе"""
+    user = callback.from_user
+    telegram_id = int(user.id)
+    
+    try:
+        manager = await manager_service.get_manager_by_telegram_id(telegram_id)
+        if not manager:
+            await callback.answer("❌ Вы не зарегистрированы как менеджер.")
+            return
+        
+        # Получаем заявки в работе
+        applications = await manager_service.get_manager_applications(
+            telegram_id, 
+            status=ApplicationStatus.IN_PROGRESS, 
+            limit=10
+        )
+        
+        if not applications:
+            await callback.message.edit_text(
+                "⚙️ **Заявки в работе**\n\n"
+                "У вас нет заявок в работе.",
+                reply_markup=get_applications_empty_keyboard()
+            )
+            return
+        
+        text = "⚙️ **Заявки в работе:**\n\n"
+        
+        for app in applications:
+            status_emoji = get_status_emoji(app.status)
+            category_text = get_category_text(app.category)
+            
+            text += f"{status_emoji} **Заявка #{app.id}**\n"
+            text += f"👤 {app.full_name}\n"
+            text += f"📱 {app.phone}\n"
+            text += f"🏙️ {app.city}\n"
+            text += f"🚗 {category_text}\n"
+            text += f"📅 {app.created_at.strftime('%d.%m.%Y %H:%M')}\n\n"
+        
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="🔄 Обновить", callback_data="in_progress_applications")],
+            [InlineKeyboardButton(text="📋 Все заявки", callback_data="my_applications")],
+            [InlineKeyboardButton(text="◀️ Назад", callback_data="back_to_main")]
+        ])
+        
+        await callback.message.edit_text(text, reply_markup=keyboard)
+    except Exception as e:
+        logger.error(f"❌ Ошибка получения заявок в работе: {e}")
+        await callback.answer("❌ Произошла ошибка.")
+
+@application_router.callback_query(F.data == "completed_applications")
+async def callback_completed_applications(callback: CallbackQuery):
+    """Показать завершенные заявки"""
+    user = callback.from_user
+    telegram_id = int(user.id)
+    
+    try:
+        manager = await manager_service.get_manager_by_telegram_id(telegram_id)
+        if not manager:
+            await callback.answer("❌ Вы не зарегистрированы как менеджер.")
+            return
+        
+        # Получаем завершенные заявки
+        applications = await manager_service.get_manager_applications(
+            telegram_id, 
+            status=ApplicationStatus.COMPLETED, 
+            limit=10
+        )
+        
+        if not applications:
+            await callback.message.edit_text(
+                "✅ **Завершенные заявки**\n\n"
+                "У вас нет завершенных заявок.",
+                reply_markup=get_applications_empty_keyboard()
+            )
+            return
+        
+        text = "✅ **Завершенные заявки:**\n\n"
+        
+        for app in applications:
+            status_emoji = get_status_emoji(app.status)
+            category_text = get_category_text(app.category)
+            
+            text += f"{status_emoji} **Заявка #{app.id}**\n"
+            text += f"👤 {app.full_name}\n"
+            text += f"📱 {app.phone}\n"
+            text += f"🏙️ {app.city}\n"
+            text += f"🚗 {category_text}\n"
+            text += f"📅 {app.created_at.strftime('%d.%m.%Y %H:%M')}\n"
+            if app.processed_at:
+                text += f"✅ Завершена: {app.processed_at.strftime('%d.%m.%Y %H:%M')}\n"
+            text += "\n"
+        
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="🔄 Обновить", callback_data="completed_applications")],
+            [InlineKeyboardButton(text="📋 Все заявки", callback_data="my_applications")],
+            [InlineKeyboardButton(text="◀️ Назад", callback_data="back_to_main")]
+        ])
+        
+        await callback.message.edit_text(text, reply_markup=keyboard)
+    except Exception as e:
+        logger.error(f"❌ Ошибка получения завершенных заявок: {e}")
+        await callback.answer("❌ Произошла ошибка.")
+
+@application_router.callback_query(F.data == "refresh_applications")
+async def callback_refresh_applications(callback: CallbackQuery):
+    """Обновить список заявок"""
+    await cmd_applications(callback.message)
+    await callback.answer("🔄 Список заявок обновлен")
+
+@application_router.callback_query(F.data == "next_application")
+async def callback_next_application(callback: CallbackQuery):
+    """Показать следующую заявку"""
+    user = callback.from_user
+    telegram_id = int(user.id)
+    
+    try:
+        manager = await manager_service.get_manager_by_telegram_id(telegram_id)
+        if not manager:
+            await callback.answer("❌ Вы не зарегистрированы как менеджер.")
+            return
+        
+        # Получаем следующую новую заявку
+        applications = await manager_service.get_manager_applications(
+            telegram_id, 
+            status=ApplicationStatus.NEW, 
+            limit=5
+        )
+        
+        if not applications:
+            await callback.answer("📋 Больше нет новых заявок")
+            return
+        
+        # Показываем вторую заявку (следующую)
+        if len(applications) > 1:
+            app = applications[1]
+            text = format_application_details(app)
+            keyboard = get_application_detail_keyboard(app.id, len(applications) > 2)
+            await callback.message.edit_text(text, reply_markup=keyboard)
+        else:
+            await callback.answer("📋 Это была последняя новая заявка")
+    except Exception as e:
+        logger.error(f"❌ Ошибка получения следующей заявки: {e}")
+        await callback.answer("❌ Произошла ошибка.")
+
+# Обработчик для добавления заметок к заявкам
+@application_router.callback_query(F.data.startswith("app_note_"))
+async def callback_application_note(callback: CallbackQuery):
+    """Добавить заметку к заявке"""
+    app_id = int(callback.data.split("_")[2])
+    user = callback.from_user
+    telegram_id = int(user.id)
+    
+    try:
+        manager = await manager_service.get_manager_by_telegram_id(telegram_id)
+        if not manager:
+            await callback.answer("❌ Вы не зарегистрированы как менеджер.")
+            return
+        
+        # Здесь можно реализовать FSM для ввода заметки
+        # Пока просто показываем информацию
+        await callback.message.edit_text(
+            f"📝 **Добавление заметки к заявке #{app_id}**\n\n"
+            f"Функция добавления заметок находится в разработке.\n"
+            f"Используйте команды для работы с заявкой.",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="◀️ Назад к заявке", callback_data=f"app_details_{app_id}")]
+            ])
+        )
+    except Exception as e:
+        logger.error(f"❌ Ошибка добавления заметки: {e}")
+        await callback.answer("❌ Произошла ошибка.")
+
 def format_application_details(application: Application) -> str:
     """Форматирование детальной информации о заявке"""
     status_emoji = get_status_emoji(application.status)
     category_text = get_category_text(application.category)
     
     text = f"{status_emoji} **Заявка #{application.id}**\n\n"
-    text += f"👤 **Имя:** {application.full_name}\n"
-    text += f"📱 **Телефон:** {application.phone}\n"
-    text += f"🎂 **Возраст:** {application.age if application.age else 'Не указан'}\n"
-    text += f"🏙️ **Город:** {application.city}\n"
-    text += f"🚗 **Категория:** {category_text}\n"
+    text += f"🚗 **Категория:** {category_text}\n\n"
     
-    if application.experience:
-        text += f"🚙 **Стаж вождения:** {application.experience}\n"
+    text += f"👤 **Основная информация:**\n"
+    text += f"• Имя: {application.full_name}\n"
+    text += f"• Телефон: {application.phone}\n"
+    text += f"• Возраст: {application.age if application.age else 'Не указан'} лет\n"
+    text += f"• Город: {application.city}\n\n"
     
-    if application.transport:
-        text += f"🛵 **Транспорт:** {application.transport}\n"
+    # Профессиональная информация
+    text += f"🚗 **Профессиональная информация:**\n"
     
-    if application.load_capacity:
-        text += f"📦 **Грузоподъемность:** {application.load_capacity}\n"
+    if application.category in ['driver', 'both', 'cargo']:
+        if application.experience:
+            text += f"• Стаж вождения: {application.experience} лет\n"
     
-    if application.additional_info:
-        text += f"💬 **Дополнительно:** {application.additional_info}\n"
+    if application.category in ['courier', 'both']:
+        if application.transport:
+            transport_map = {
+                "foot": "🚶 Пеший курьер",
+                "bike": "🚴 Велосипед", 
+                "scooter": "🛴 Электросамокат",
+                "motorcycle": "🏍️ Мотоцикл/скутер",
+                "car": "🚗 Автомобиль"
+            }
+            text += f"• Транспорт: {transport_map.get(application.transport, application.transport)}\n"
+    
+    if application.category == 'cargo':
+        if application.load_capacity:
+            text += f"• Грузоподъемность: {application.load_capacity}\n"
     
     text += f"\n📅 **Дата подачи:** {application.created_at.strftime('%d.%m.%Y %H:%M')}\n"
-    text += f"📊 **Статус:** {application.status.value.upper()}"
+    text += f"📊 **Статус:** {application.status.value.upper()}\n"
+    
+    if application.assigned_manager_id:
+        text += f"👤 **Менеджер:** Назначен\n"
+    else:
+        text += f"👤 **Менеджер:** Не назначен\n"
+    
+    if application.processed_at:
+        text += f"⚡ **Обработана:** {application.processed_at.strftime('%d.%m.%Y %H:%M')}\n"
+    
+    # Дополнительная информация
+    if application.additional_info:
+        text += f"\n📝 **Дополнительная информация:**\n"
+        
+        # Разбиваем длинную дополнительную информацию на части для удобства чтения
+        info_lines = application.additional_info.split('\n')
+        for line in info_lines[:10]:  # Показываем первые 10 строк
+            if line.strip():
+                text += f"• {line.strip()}\n"
+        
+        if len(info_lines) > 10:
+            text += f"• ... и еще {len(info_lines) - 10} пунктов\n"
     
     if application.notes:
-        text += f"\n📝 **Заметки:** {application.notes}"
+        text += f"\n📝 **Заметки менеджера:**\n{application.notes}\n"
     
     return text
 

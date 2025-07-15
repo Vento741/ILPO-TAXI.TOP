@@ -130,7 +130,7 @@ async def signup_application(request: Request):
             # Импортируем функцию обработки заявок
             from telegram_bot.services.application_service import handle_new_application_from_site
             
-            # Обрабатываем заявку через Telegram бот
+            # Обрабатываем заявку через Telegram бот (передаем исходные данные формы)
             bot_success = await handle_new_application_from_site(data)
             
             if bot_success:
@@ -140,6 +140,9 @@ async def signup_application(request: Request):
                 
         except Exception as e:
             print(f"❌ Ошибка интеграции с Telegram ботом: {e}")
+            # Логируем полную ошибку для отладки
+            import traceback
+            print(f"Подробности ошибки: {traceback.format_exc()}")
         
         # Имитируем обработку заявки
         await asyncio.sleep(1)

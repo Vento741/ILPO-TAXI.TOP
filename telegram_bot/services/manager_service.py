@@ -530,5 +530,181 @@ class ManagerService:
         except Exception as e:
             logger.error(f"❌ Ошибка отправки уведомления менеджеру: {e}")
 
+    async def get_manager_detailed_stats(self, telegram_id: int) -> Optional[Dict[str, Any]]:
+        """Получить детальную статистику менеджера"""
+        async with AsyncSessionLocal() as session:
+            try:
+                manager = await session.execute(
+                    select(Manager).where(Manager.telegram_id == telegram_id)
+                )
+                manager = manager.scalar_one_or_none()
+                if not manager:
+                    return None
+                
+                # Общая статистика
+                total_apps = await session.execute(
+                    select(func.count(Application.id)).where(
+                        Application.assigned_manager_id == manager.id
+                    )
+                )
+                total_applications = total_apps.scalar() or 0
+                
+                # Завершенные заявки
+                completed_apps = await session.execute(
+                    select(func.count(Application.id)).where(
+                        and_(
+                            Application.assigned_manager_id == manager.id,
+                            Application.status == ApplicationStatus.COMPLETED
+                        )
+                    )
+                )
+                completed_applications = completed_apps.scalar() or 0
+                
+                # Отмененные заявки
+                cancelled_apps = await session.execute(
+                    select(func.count(Application.id)).where(
+                        and_(
+                            Application.assigned_manager_id == manager.id,
+                            Application.status == ApplicationStatus.CANCELLED
+                        )
+                    )
+                )
+                cancelled_applications = cancelled_apps.scalar() or 0
+                
+                # За месяц
+                month_ago = datetime.utcnow() - timedelta(days=30)
+                month_apps = await session.execute(
+                    select(func.count(Application.id)).where(
+                        and_(
+                            Application.assigned_manager_id == manager.id,
+                            Application.processed_at >= month_ago
+                        )
+                    )
+                )
+                month_applications = month_apps.scalar() or 0
+                
+                # Часы работы за месяц
+                month_sessions = await session.execute(
+                    select(ManagerWorkSession).where(
+                        and_(
+                            ManagerWorkSession.manager_id == manager.id,
+                            ManagerWorkSession.started_at >= month_ago
+                        )
+                    )
+                )
+                month_sessions = month_sessions.scalars().all()
+                
+                month_work_time = 0
+                for session_obj in month_sessions:
+                    if session_obj.ended_at:
+                        work_time = (session_obj.ended_at - session_obj.started_at).total_seconds()
+                        month_work_time += work_time
+                
+                # Процент успеха
+                success_rate = round((completed_applications / max(total_applications, 1)) * 100, 1)
+                
+                # Рейтинг среди менеджеров
+                all_managers = await session.execute(
+                    select(Manager).where(Manager.is_active == True)
+                    .order_by(desc(Manager.total_applications))
+                )
+                all_managers = all_managers.scalars().all()
+                
+                rank = 1
+                for i, mgr in enumerate(all_managers, 1):
+                    if mgr.id == manager.id:
+                        rank = i
+                        break
+                
+                return {
+                    "manager_name": f"{manager.first_name} {manager.last_name or ''}".strip(),
+                    "total_applications": total_applications,
+                    "completed_applications": completed_applications,
+                    "cancelled_applications": cancelled_applications,
+                    "success_rate": success_rate,
+                    "month_applications": month_applications,
+                    "month_work_hours": round(month_work_time / 3600, 1),
+                    "avg_response_time": manager.avg_response_time,
+                    "rank": rank,
+                    "total_managers": len(all_managers),
+                    "client_rating": 4.5  # Пока захардкодим, потом можно добавить систему оценок
+                }
+                
+            except Exception as e:
+                logger.error(f"❌ Ошибка получения детальной статистики: {e}")
+                return None
+    
+    async def get_system_stats(self) -> Dict[str, Any]:
+        """Получить общую статистику системы для админов"""
+        async with AsyncSessionLocal() as session:
+            try:
+                # Общее количество менеджеров
+                total_managers = await session.execute(
+                    select(func.count(Manager.id)).where(Manager.is_active == True)
+                )
+                total_managers = total_managers.scalar() or 0
+                
+                # Менеджеры онлайн
+                online_managers = await session.execute(
+                    select(func.count(Manager.id)).where(
+                        and_(
+                            Manager.is_active == True,
+                            Manager.status.in_([ManagerStatus.ONLINE, ManagerStatus.BUSY])
+                        )
+                    )
+                )
+                online_managers = online_managers.scalar() or 0
+                
+                # Активные чаты (из Redis или подсчет через базу)
+                active_chats = 0  # Можно подсчитать через Redis
+                
+                # Заявки за сегодня
+                today = datetime.utcnow().date()
+                today_applications = await session.execute(
+                    select(func.count(Application.id)).where(
+                        func.date(Application.created_at) == today
+                    )
+                )
+                today_applications = today_applications.scalar() or 0
+                
+                # За последний час
+                hour_ago = datetime.utcnow() - timedelta(hours=1)
+                hour_applications = await session.execute(
+                    select(func.count(Application.id)).where(
+                        Application.created_at >= hour_ago
+                    )
+                )
+                hour_applications = hour_applications.scalar() or 0
+                
+                hour_completed = await session.execute(
+                    select(func.count(Application.id)).where(
+                        and_(
+                            Application.processed_at >= hour_ago,
+                            Application.status == ApplicationStatus.COMPLETED
+                        )
+                    )
+                )
+                hour_completed = hour_completed.scalar() or 0
+                
+                return {
+                    "total_managers": total_managers,
+                    "online_managers": online_managers,
+                    "active_chats": active_chats,
+                    "today_applications": today_applications,
+                    "hour_applications": hour_applications,
+                    "hour_completed": hour_completed
+                }
+                
+            except Exception as e:
+                logger.error(f"❌ Ошибка получения системной статистики: {e}")
+                return {
+                    "total_managers": 0,
+                    "online_managers": 0,
+                    "active_chats": 0,
+                    "today_applications": 0,
+                    "hour_applications": 0,
+                    "hour_completed": 0
+                }
+
 # Создаем глобальный экземпляр сервиса
 manager_service = ManagerService() 
