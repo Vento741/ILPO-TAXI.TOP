@@ -5,7 +5,7 @@ import logging
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, func, desc
+from sqlalchemy import select, and_, func, desc, or_
 from sqlalchemy.orm import selectinload
 
 from telegram_bot.models.database import AsyncSessionLocal
@@ -210,9 +210,19 @@ class ManagerService:
         self, 
         telegram_id: int, 
         status: Optional[ApplicationStatus] = None,
-        limit: int = 10
+        limit: int = 10,
+        offset: int = 0,
+        show_all: bool = False
     ) -> List[Application]:
-        """Получить заявки менеджера"""
+        """Получить заявки менеджера
+        
+        Args:
+            telegram_id: Telegram ID менеджера
+            status: Статус заявок для фильтрации
+            limit: Максимальное количество заявок
+            offset: Смещение для пагинации
+            show_all: Показать все заявки (как для админа)
+        """
         async with AsyncSessionLocal() as session:
             try:
                 # Получаем менеджера
@@ -223,15 +233,30 @@ class ManagerService:
                 if not manager:
                     return []
                 
-                # Если запрашиваются новые заявки - показываем неназначенные NEW заявки
+                # Если запрашиваются новые заявки
                 if status == ApplicationStatus.NEW:
+                    # Показываем неназначенные NEW заявки + незавершенные заявки этого менеджера
                     query = select(Application).where(
-                        Application.status == ApplicationStatus.NEW,
-                        Application.assigned_manager_id.is_(None)
+                        or_(
+                            # Неназначенные новые заявки
+                            and_(
+                                Application.status == ApplicationStatus.NEW,
+                                Application.assigned_manager_id.is_(None)
+                            ),
+                            # Незавершенные заявки этого менеджера
+                            and_(
+                                Application.assigned_manager_id == manager.id,
+                                Application.status.in_([
+                                    ApplicationStatus.ASSIGNED, 
+                                    ApplicationStatus.IN_PROGRESS,
+                                    ApplicationStatus.WAITING_CLIENT
+                                ])
+                            )
+                        )
                     )
                 else:
-                    # Для администраторов показываем все заявки, включая назначенные другим менеджерам
-                    if manager.is_admin:
+                    # Для просмотра всех заявок или если менеджер является админом
+                    if show_all or manager.is_admin:
                         query = select(Application)
                         if status:
                             query = query.where(Application.status == status)
@@ -241,7 +266,13 @@ class ManagerService:
                         if status:
                             query = query.where(Application.status == status)
                 
-                query = query.order_by(desc(Application.created_at)).limit(limit)
+                # Добавляем сортировку, смещение и лимит
+                query = query.order_by(desc(Application.created_at))
+                
+                # Применяем пагинацию
+                if offset > 0:
+                    query = query.offset(offset)
+                query = query.limit(limit)
                 
                 result = await session.execute(query)
                 return result.scalars().all()
@@ -250,16 +281,37 @@ class ManagerService:
                 logger.error(f"❌ Ошибка получения заявок менеджера: {e}")
                 return []
     
-    async def get_all_applications(self, limit: int = 20) -> List[Application]:
-        """Получить все заявки в системе (для админов и менеджеров)"""
+    async def get_all_applications(self, limit: int = 20, offset: int = 0) -> tuple[List[Application], int]:
+        """Получить все заявки в системе (для админов и менеджеров)
+        
+        Args:
+            limit: Максимальное количество заявок
+            offset: Смещение для пагинации
+            
+        Returns:
+            Tuple[List[Application], int]: Список заявок и общее количество заявок
+        """
         async with AsyncSessionLocal() as session:
             try:
-                query = select(Application).order_by(desc(Application.created_at)).limit(limit)
+                # Получаем общее количество заявок для пагинации
+                total_count_query = select(func.count(Application.id))
+                total_count_result = await session.execute(total_count_query)
+                total_count = total_count_result.scalar() or 0
+                
+                # Запрос с пагинацией
+                query = select(Application).order_by(desc(Application.created_at))
+                
+                if offset > 0:
+                    query = query.offset(offset)
+                query = query.limit(limit)
+                
                 result = await session.execute(query)
-                return result.scalars().all()
+                applications = result.scalars().all()
+                
+                return applications, total_count
             except Exception as e:
                 logger.error(f"❌ Ошибка получения всех заявок: {e}")
-                return []
+                return [], 0
 
     async def get_available_new_applications(self, limit: int = 10) -> List[Application]:
         """Получить доступные новые заявки (неназначенные)"""

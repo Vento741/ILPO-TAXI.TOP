@@ -72,8 +72,20 @@ async def cmd_applications(message: Message):
         await message.answer("❌ Произошла ошибка при получении заявок.")
 
 # Вспомогательная функция для обработки списка заявок через callback
-async def process_applications_callback(callback: CallbackQuery, status: Optional[ApplicationStatus] = None):
-    """Обработать запрос на показ заявок через callback"""
+async def process_applications_callback(
+    callback: CallbackQuery, 
+    status: Optional[ApplicationStatus] = None,
+    page: int = 1,
+    show_all: bool = False
+):
+    """Обработать запрос на показ заявок через callback
+    
+    Args:
+        callback: Объект CallbackQuery
+        status: Статус заявок для фильтрации
+        page: Номер страницы для пагинации (начиная с 1)
+        show_all: Показать все заявки (как для админа)
+    """
     user = callback.from_user
     telegram_id = int(user.id)
     
@@ -83,8 +95,28 @@ async def process_applications_callback(callback: CallbackQuery, status: Optiona
             await callback.answer("❌ Вы не зарегистрированы как менеджер.")
             return
         
+        # Настройки пагинации
+        per_page = 5  # Количество заявок на странице
+        offset = (page - 1) * per_page
+        
         # Получаем заявки менеджера с указанным статусом
-        applications = await manager_service.get_manager_applications(telegram_id, status=status, limit=10)
+        applications = await manager_service.get_manager_applications(
+            telegram_id, 
+            status=status, 
+            limit=per_page, 
+            offset=offset,
+            show_all=show_all
+        )
+        
+        # Получаем общее количество заявок для пагинации
+        all_applications = await manager_service.get_manager_applications(
+            telegram_id, 
+            status=status,
+            limit=1000,  # Большое значение для получения всех заявок
+            show_all=show_all
+        )
+        total_applications = len(all_applications)
+        total_pages = (total_applications + per_page - 1) // per_page  # Округление вверх
         
         if not applications:
             try:
@@ -115,7 +147,10 @@ async def process_applications_callback(callback: CallbackQuery, status: Optiona
             ApplicationStatus.COMPLETED: "Завершенные"
         }.get(status, "")
         
-        text = f"📋 **{status_text} заявки:**\n\n"
+        if show_all:
+            status_text = "Все"
+        
+        text = f"📋 **{status_text} заявки (стр. {page}/{total_pages}):**\n\n"
         
         for app in applications:
             status_emoji = get_status_emoji(app.status)
@@ -132,8 +167,49 @@ async def process_applications_callback(callback: CallbackQuery, status: Optiona
         current_time = datetime.utcnow().strftime('%H:%M:%S')
         text += f"Обновлено: {current_time}"
         
+        # Формируем клавиатуру с кнопками выбора заявки и пагинации
+        keyboard_buttons = []
+        
+        # Кнопки выбора заявок
+        for app in applications:
+            keyboard_buttons.append([
+                InlineKeyboardButton(
+                    text=f"#{app.id} - {app.full_name} ({get_status_emoji(app.status)})",
+                    callback_data=f"app_details_{app.id}"
+                )
+            ])
+        
+        # Кнопки пагинации
+        pagination_buttons = []
+        if page > 1:
+            # Кнопка "Назад" для перехода на предыдущую страницу
+            callback_data = f"page_{get_status_code(status)}_{page-1}"
+            if show_all:
+                callback_data += "_all"
+            pagination_buttons.append(
+                InlineKeyboardButton(text="◀️ Назад", callback_data=callback_data)
+            )
+        
+        if page < total_pages:
+            # Кнопка "Вперед" для перехода на следующую страницу
+            callback_data = f"page_{get_status_code(status)}_{page+1}"
+            if show_all:
+                callback_data += "_all"
+            pagination_buttons.append(
+                InlineKeyboardButton(text="Вперед ▶️", callback_data=callback_data)
+            )
+        
+        if pagination_buttons:
+            keyboard_buttons.append(pagination_buttons)
+        
+        # Кнопки управления
+        keyboard_buttons.append([InlineKeyboardButton(text="🔄 Обновить", callback_data=f"refresh_{get_status_code(status)}")])
+        keyboard_buttons.append([InlineKeyboardButton(text="◀️ К списку заявок", callback_data="applications_menu")])
+        
+        keyboard = InlineKeyboardMarkup(inline_keyboard=keyboard_buttons)
+        
         try:
-            await callback.message.edit_text(text, reply_markup=get_applications_keyboard())
+            await callback.message.edit_text(text, reply_markup=keyboard)
             await callback.answer("✅ Список заявок обновлен")
         except Exception as edit_error:
             if "message is not modified" in str(edit_error):
@@ -145,52 +221,43 @@ async def process_applications_callback(callback: CallbackQuery, status: Optiona
         logger.error(f"❌ Ошибка получения заявок: {e}")
         await callback.answer("❌ Произошла ошибка при получении заявок.")
 
+def get_status_code(status: Optional[ApplicationStatus]) -> str:
+    """Получить код статуса для использования в callback_data"""
+    if status is None:
+        return "all"
+    return {
+        ApplicationStatus.NEW: "new",
+        ApplicationStatus.ASSIGNED: "assigned",
+        ApplicationStatus.IN_PROGRESS: "in_progress",
+        ApplicationStatus.COMPLETED: "completed",
+        ApplicationStatus.WAITING_CLIENT: "waiting",
+        ApplicationStatus.CANCELLED: "cancelled"
+    }.get(status, "all")
+
+@application_router.callback_query(F.data == "my_applications")
+async def callback_my_applications(callback: CallbackQuery):
+    """Показать мои заявки"""
+    await process_applications_callback(callback)
+
 @application_router.callback_query(F.data == "new_applications")
 async def callback_new_applications(callback: CallbackQuery):
     """Показать новые заявки"""
-    user = callback.from_user
-    telegram_id = int(user.id)
-    
-    try:
-        manager = await manager_service.get_manager_by_telegram_id(telegram_id)
-        if not manager:
-            await callback.answer("❌ Вы не зарегистрированы как менеджер.")
-            return
-        
-        # Получаем новые неназначенные заявки
-        applications = await manager_service.get_available_new_applications(limit=5)
-        
-        if not applications:
-            try:
-                await callback.message.edit_text(
-                    "📋 **Новых заявок нет**\n\n"
-                    "Все новые заявки уже обработаны или назначены другим менеджерам.",
-                    reply_markup=get_applications_empty_keyboard()
-                )
-            except Exception as edit_error:
-                if "message is not modified" in str(edit_error):
-                    await callback.answer("✅ Список заявок актуален")
-                else:
-                    raise edit_error
-            return
-        
-        # Показываем первую заявку детально
-        app = applications[0]
-        text = format_application_details(app)
-        
-        keyboard = get_application_detail_keyboard(app.id, len(applications) > 1)
-        
-        try:
-            await callback.message.edit_text(text, reply_markup=keyboard)
-        except Exception as edit_error:
-            if "message is not modified" in str(edit_error):
-                await callback.answer("✅ Заявка актуальна")
-            else:
-                raise edit_error
-    
-    except Exception as e:
-        logger.error(f"❌ Ошибка получения новых заявок: {e}")
-        await callback.answer("❌ Произошла ошибка.")
+    await process_applications_callback(callback, status=ApplicationStatus.NEW)
+
+@application_router.callback_query(F.data == "assigned_applications")
+async def callback_assigned_applications(callback: CallbackQuery):
+    """Показать назначенные заявки"""
+    await process_applications_callback(callback, status=ApplicationStatus.ASSIGNED)
+
+@application_router.callback_query(F.data == "in_progress_applications")
+async def callback_in_progress_applications(callback: CallbackQuery):
+    """Показать заявки в работе"""
+    await process_applications_callback(callback, status=ApplicationStatus.IN_PROGRESS)
+
+@application_router.callback_query(F.data == "completed_applications")
+async def callback_completed_applications(callback: CallbackQuery):
+    """Показать завершенные заявки"""
+    await process_applications_callback(callback, status=ApplicationStatus.COMPLETED)
 
 @application_router.callback_query(F.data.startswith("app_"))
 async def callback_application_action(callback: CallbackQuery):
@@ -290,189 +357,9 @@ async def callback_application_action(callback: CallbackQuery):
         logger.error(f"❌ Ошибка обработки действия с заявкой: {e}")
         await callback.answer("❌ Произошла ошибка.")
 
-@application_router.callback_query(F.data == "my_applications")
-async def callback_my_applications(callback: CallbackQuery):
-    """Показать мои заявки"""
-    await process_applications_callback(callback)
-
-# ДОБАВЛЯЮ НЕДОСТАЮЩИЕ ОБРАБОТЧИКИ ДЛЯ ЗАЯВОК:
-
-@application_router.callback_query(F.data == "in_progress_applications")
-async def callback_in_progress_applications(callback: CallbackQuery):
-    """Показать заявки в работе"""
-    user = callback.from_user
-    telegram_id = int(user.id)
-    
-    try:
-        manager = await manager_service.get_manager_by_telegram_id(telegram_id)
-        if not manager:
-            await callback.answer("❌ Вы не зарегистрированы как менеджер.")
-            return
-        
-        # Получаем заявки в работе
-        applications = await manager_service.get_manager_applications(
-            telegram_id, 
-            status=ApplicationStatus.IN_PROGRESS, 
-            limit=10
-        )
-        
-        if not applications:
-            try:
-                await callback.message.edit_text(
-                    "⚙️ **Заявки в работе**\n\n"
-                    "У вас нет заявок в работе.",
-                    reply_markup=get_applications_empty_keyboard()
-                )
-            except Exception as edit_error:
-                if "message is not modified" in str(edit_error):
-                    await callback.answer("✅ Список заявок актуален")
-                else:
-                    raise edit_error
-            return
-        
-        text = "⚙️ **Заявки в работе:**\n\n"
-        
-        for app in applications:
-            status_emoji = get_status_emoji(app.status)
-            category_text = get_category_text(app.category)
-            
-            text += f"{status_emoji} **Заявка #{app.id}**\n"
-            text += f"👤 {app.full_name}\n"
-            text += f"📱 {app.phone}\n"
-            text += f"🏙️ {app.city}\n"
-            text += f"🚗 {category_text}\n"
-            text += f"📅 {app.created_at.strftime('%d.%m.%Y %H:%M')}\n\n"
-        
-        keyboard = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="🔄 Обновить", callback_data="in_progress_applications")],
-            [InlineKeyboardButton(text="📋 Все заявки", callback_data="my_applications")],
-            [InlineKeyboardButton(text="◀️ Назад", callback_data="back_to_main")]
-        ])
-        
-        try:
-            # Добавляем метку времени, чтобы сообщение всегда было разным
-            current_time = datetime.utcnow().strftime('%H:%M:%S')
-            text += f"\n\nОбновлено: {current_time}"
-            
-            await callback.message.edit_text(text, reply_markup=keyboard)
-        except Exception as edit_error:
-            if "message is not modified" in str(edit_error):
-                await callback.answer("✅ Список заявок актуален")
-            else:
-                raise edit_error
-                
-    except Exception as e:
-        logger.error(f"❌ Ошибка получения заявок в работе: {e}")
-        await callback.answer("❌ Произошла ошибка.")
-
-@application_router.callback_query(F.data == "completed_applications")
-async def callback_completed_applications(callback: CallbackQuery):
-    """Показать завершенные заявки"""
-    user = callback.from_user
-    telegram_id = int(user.id)
-    
-    try:
-        manager = await manager_service.get_manager_by_telegram_id(telegram_id)
-        if not manager:
-            await callback.answer("❌ Вы не зарегистрированы как менеджер.")
-            return
-        
-        # Получаем завершенные заявки
-        applications = await manager_service.get_manager_applications(
-            telegram_id, 
-            status=ApplicationStatus.COMPLETED, 
-            limit=10
-        )
-        
-        if not applications:
-            try:
-                await callback.message.edit_text(
-                    "✅ **Завершенные заявки**\n\n"
-                    "У вас нет завершенных заявок.",
-                    reply_markup=get_applications_empty_keyboard()
-                )
-            except Exception as edit_error:
-                if "message is not modified" in str(edit_error):
-                    await callback.answer("✅ Список заявок актуален")
-                else:
-                    raise edit_error
-            return
-        
-        text = "✅ **Завершенные заявки:**\n\n"
-        
-        for app in applications:
-            status_emoji = get_status_emoji(app.status)
-            category_text = get_category_text(app.category)
-            
-            text += f"{status_emoji} **Заявка #{app.id}**\n"
-            text += f"👤 {app.full_name}\n"
-            text += f"📱 {app.phone}\n"
-            text += f"🏙️ {app.city}\n"
-            text += f"🚗 {category_text}\n"
-            text += f"📅 {app.created_at.strftime('%d.%m.%Y %H:%M')}\n\n"
-        
-        keyboard = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="🔄 Обновить", callback_data="completed_applications")],
-            [InlineKeyboardButton(text="📋 Все заявки", callback_data="my_applications")],
-            [InlineKeyboardButton(text="◀️ Назад", callback_data="back_to_main")]
-        ])
-        
-        try:
-            # Добавляем метку времени, чтобы сообщение всегда было разным
-            current_time = datetime.utcnow().strftime('%H:%M:%S')
-            text += f"\n\nОбновлено: {current_time}"
-            
-            await callback.message.edit_text(text, reply_markup=keyboard)
-        except Exception as edit_error:
-            if "message is not modified" in str(edit_error):
-                await callback.answer("✅ Список заявок актуален")
-            else:
-                raise edit_error
-                
-    except Exception as e:
-        logger.error(f"❌ Ошибка получения завершенных заявок: {e}")
-        await callback.answer("❌ Произошла ошибка.")
-
-@application_router.callback_query(F.data == "refresh_applications")
-async def callback_refresh_applications(callback: CallbackQuery):
-    """Обновить список заявок"""
-    await process_applications_callback(callback)
-
-@application_router.callback_query(F.data == "next_application")
-async def callback_next_application(callback: CallbackQuery):
-    """Показать следующую заявку"""
-    user = callback.from_user
-    telegram_id = int(user.id)
-    
-    try:
-        manager = await manager_service.get_manager_by_telegram_id(telegram_id)
-        if not manager:
-            await callback.answer("❌ Вы не зарегистрированы как менеджер.")
-            return
-        
-        # Получаем следующую новую заявку
-        applications = await manager_service.get_available_new_applications(limit=5)
-        
-        if not applications:
-            await callback.answer("📋 Больше нет новых заявок")
-            return
-        
-        # Показываем вторую заявку (следующую)
-        if len(applications) > 1:
-            app = applications[1]
-            text = format_application_details(app)
-            keyboard = get_application_detail_keyboard(app.id, len(applications) > 2)
-            await callback.message.edit_text(text, reply_markup=keyboard)
-        else:
-            await callback.answer("📋 Это была последняя новая заявка")
-    except Exception as e:
-        logger.error(f"❌ Ошибка получения следующей заявки: {e}")
-        await callback.answer("❌ Произошла ошибка.")
-
-# Обработчик для добавления заметок к заявкам
-@application_router.callback_query(F.data.startswith("app_note_"))
-async def callback_application_note(callback: CallbackQuery):
-    """Добавить заметку к заявке"""
+@application_router.callback_query(F.data.startswith("app_details_"))
+async def callback_application_details(callback: CallbackQuery):
+    """Показать детали заявки по ID"""
     app_id = int(callback.data.split("_")[2])
     user = callback.from_user
     telegram_id = int(user.id)
@@ -483,96 +370,141 @@ async def callback_application_note(callback: CallbackQuery):
             await callback.answer("❌ Вы не зарегистрированы как менеджер.")
             return
         
-        # Здесь можно реализовать FSM для ввода заметки
-        # Пока просто показываем информацию
-        await callback.message.edit_text(
-            f"📝 **Добавление заметки к заявке #{app_id}**\n\n"
-            f"Функция добавления заметок находится в разработке.\n"
-            f"Используйте команды для работы с заявкой.",
-            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text="◀️ Назад к заявке", callback_data=f"app_details_{app_id}")]
+        # Получаем заявку из базы данных
+        async with AsyncSessionLocal() as session:
+            application = await session.get(Application, app_id)
+            
+            if not application:
+                await callback.answer("❌ Заявка не найдена.")
+                return
+            
+            # Форматируем детальную информацию о заявке
+            text = format_application_details(application)
+            
+            # Определяем доступные действия с заявкой
+            is_assigned_to_manager = application.assigned_manager_id == manager.id
+            is_new = application.status == ApplicationStatus.NEW and not application.assigned_manager_id
+            is_in_progress = application.status in [ApplicationStatus.ASSIGNED, ApplicationStatus.IN_PROGRESS]
+            
+            # Формируем клавиатуру с действиями
+            keyboard_buttons = []
+            
+            # Кнопка "Взять в работу" для новых заявок
+            if is_new or (manager.is_admin and not application.assigned_manager_id):
+                keyboard_buttons.append([
+                    InlineKeyboardButton(text="✅ Взять в работу", callback_data=f"app_take_{app_id}")
+                ])
+            
+            # Кнопки для заявок в работе
+            if is_assigned_to_manager and is_in_progress:
+                keyboard_buttons.append([
+                    InlineKeyboardButton(text="📞 Контакты клиента", callback_data=f"app_contact_{app_id}")
+                ])
+                keyboard_buttons.append([
+                    InlineKeyboardButton(text="✅ Завершить заявку", callback_data=f"app_complete_{app_id}")
+                ])
+                keyboard_buttons.append([
+                    InlineKeyboardButton(text="📝 Добавить заметку", callback_data=f"app_note_{app_id}")
+                ])
+            
+            # Кнопка возврата
+            keyboard_buttons.append([
+                InlineKeyboardButton(text="◀️ Назад к списку", callback_data="applications_menu")
             ])
-        )
+            
+            keyboard = InlineKeyboardMarkup(inline_keyboard=keyboard_buttons)
+            
+            # Отправляем детальную информацию
+            await callback.message.edit_text(text, reply_markup=keyboard)
+    
     except Exception as e:
-        logger.error(f"❌ Ошибка добавления заметки: {e}")
-        await callback.answer("❌ Произошла ошибка.")
+        logger.error(f"❌ Ошибка получения деталей заявки: {e}")
+        await callback.answer("❌ Произошла ошибка при получении деталей заявки.")
 
 @application_router.callback_query(F.data == "all_applications")
 async def callback_all_applications(callback: CallbackQuery):
     """Показать все заявки в системе"""
-    user = callback.from_user
-    telegram_id = int(user.id)
+    await process_applications_callback(callback, show_all=True)
+
+@application_router.callback_query(F.data == "applications_menu")
+async def callback_applications_menu(callback: CallbackQuery):
+    """Показать меню заявок"""
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="📋 Мои заявки", callback_data="my_applications")],
+        [InlineKeyboardButton(text="📋 Новые заявки", callback_data="new_applications")],
+        [InlineKeyboardButton(text="📋 Назначенные заявки", callback_data="assigned_applications")],
+        [InlineKeyboardButton(text="⚙️ В работе", callback_data="in_progress_applications")],
+        [InlineKeyboardButton(text="✅ Завершенные", callback_data="completed_applications")],
+        [InlineKeyboardButton(text="📋 Все заявки", callback_data="all_applications")],
+        [InlineKeyboardButton(text="◀️ Назад", callback_data="back_to_main")]
+    ])
     
     try:
-        manager = await manager_service.get_manager_by_telegram_id(telegram_id)
-        if not manager:
-            await callback.answer("❌ Вы не зарегистрированы как менеджер.")
-            return
-        
-        # Получаем все заявки (без фильтра по статусу и менеджеру)
-        applications = await manager_service.get_all_applications(limit=15)
-        
-        if not applications:
-            await callback.message.edit_text(
-                "📋 **Все заявки системы**\n\n"
-                "В системе нет заявок.",
-                reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                    [InlineKeyboardButton(text="🔄 Обновить", callback_data="all_applications")],
-                    [InlineKeyboardButton(text="◀️ К списку заявок", callback_data="my_applications")]
-                ])
-            )
-            return
-        
-        text = f"📋 **Все заявки системы ({len(applications)})**\n\n"
-        
-        for app in applications[:10]:
-            status_emoji = get_status_emoji(app.status)
-            category_text = get_category_text(app.category)
-            
-            text += f"{status_emoji} **Заявка #{app.id}**\n"
-            text += f"👤 {app.full_name}\n"
-            text += f"📱 {app.phone}\n"
-            text += f"🏙️ {app.city}\n"
-            text += f"🚗 {category_text}\n"
-            
-            # Показываем менеджера, если заявка назначена
-            if app.assigned_manager_id:
-                text += f"👤 Менеджер: Назначен\n"
-            else:
-                text += f"👤 Менеджер: Не назначен\n"
-                
-            text += f"📅 {app.created_at.strftime('%d.%m.%Y %H:%M')}\n\n"
-        
-        if len(applications) > 10:
-            text += f"... и еще {len(applications) - 10} заявок"
-        
-        keyboard = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="🔄 Обновить", callback_data="all_applications")],
-            [InlineKeyboardButton(text="📋 Мои заявки", callback_data="my_applications")],
-            [InlineKeyboardButton(text="◀️ Назад", callback_data="back_to_main")]
-        ])
-        
-        try:
-            # Добавляем метку времени, чтобы сообщение всегда было разным
-            current_time = datetime.utcnow().strftime('%H:%M:%S')
-            text += f"\n\nОбновлено: {current_time}"
-            
-            await callback.message.edit_text(text, reply_markup=keyboard)
-        except Exception as edit_error:
-            # Если ошибка связана с тем, что сообщение не изменилось
-            if "message is not modified" in str(edit_error):
-                await callback.answer("✅ Список заявок актуален")
-            else:
-                # Другие ошибки пробрасываем дальше
-                raise edit_error
+        await callback.message.edit_text(
+            "📋 **Управление заявками**\n\n"
+            "Выберите категорию заявок для просмотра:",
+            reply_markup=keyboard
+        )
     except Exception as e:
-        logger.error(f"❌ Ошибка получения всех заявок: {e}")
-        await callback.answer("❌ Произошла ошибка при получении заявок.")
+        if "message is not modified" in str(e):
+            await callback.answer("✅ Меню заявок актуально")
+        else:
+            logger.error(f"❌ Ошибка отображения меню заявок: {e}")
+            await callback.answer("❌ Произошла ошибка.")
 
-@application_router.callback_query(F.data == "assigned_applications")
-async def callback_assigned_applications(callback: CallbackQuery):
-    """Показать назначенные заявки"""
-    await process_applications_callback(callback, status=ApplicationStatus.ASSIGNED)
+# Обработчик для пагинации
+@application_router.callback_query(F.data.startswith("page_"))
+async def callback_pagination(callback: CallbackQuery):
+    """Обработка пагинации для списков заявок"""
+    data_parts = callback.data.split("_")
+    
+    # Формат: page_STATUS_НОМЕР[_all]
+    if len(data_parts) < 3:
+        await callback.answer("❌ Некорректный формат данных пагинации")
+        return
+    
+    status_code = data_parts[1]
+    page = int(data_parts[2])
+    show_all = len(data_parts) > 3 and data_parts[3] == "all"
+    
+    # Определяем статус по коду
+    status_map = {
+        "new": ApplicationStatus.NEW,
+        "assigned": ApplicationStatus.ASSIGNED,
+        "in_progress": ApplicationStatus.IN_PROGRESS,
+        "completed": ApplicationStatus.COMPLETED,
+        "waiting": ApplicationStatus.WAITING_CLIENT,
+        "cancelled": ApplicationStatus.CANCELLED,
+        "all": None
+    }
+    
+    status = status_map.get(status_code)
+    
+    # Вызываем обработчик с указанной страницей
+    await process_applications_callback(callback, status=status, page=page, show_all=show_all)
+
+# Обработчики для обновления списков с разными статусами
+@application_router.callback_query(F.data.startswith("refresh_"))
+async def callback_refresh_by_status(callback: CallbackQuery):
+    """Обновить список заявок с определенным статусом"""
+    status_code = callback.data.split("_")[1]
+    
+    # Определяем статус по коду
+    status_map = {
+        "new": ApplicationStatus.NEW,
+        "assigned": ApplicationStatus.ASSIGNED,
+        "in_progress": ApplicationStatus.IN_PROGRESS,
+        "completed": ApplicationStatus.COMPLETED,
+        "waiting": ApplicationStatus.WAITING_CLIENT,
+        "cancelled": ApplicationStatus.CANCELLED,
+        "all": None
+    }
+    
+    status = status_map.get(status_code)
+    show_all = status_code == "all"
+    
+    # Вызываем обработчик с указанным статусом
+    await process_applications_callback(callback, status=status, show_all=show_all)
 
 def format_application_details(application: Application) -> str:
     """Форматирование детальной информации о заявке"""
@@ -876,3 +808,83 @@ async def notify_manager_about_new_application(manager, application: Application
         
     except Exception as e:
         logger.error(f"❌ Ошибка уведомления менеджера: {e}") 
+
+# Обработчик для добавления заметок к заявкам
+@application_router.callback_query(F.data.startswith("app_note_"))
+async def callback_application_note(callback: CallbackQuery):
+    """Добавить заметку к заявке"""
+    app_id = int(callback.data.split("_")[2])
+    user = callback.from_user
+    telegram_id = int(user.id)
+    
+    try:
+        manager = await manager_service.get_manager_by_telegram_id(telegram_id)
+        if not manager:
+            await callback.answer("❌ Вы не зарегистрированы как менеджер.")
+            return
+        
+        # Здесь можно реализовать FSM для ввода заметки
+        # Пока просто показываем информацию
+        await callback.message.edit_text(
+            f"📝 **Добавление заметки к заявке #{app_id}**\n\n"
+            f"Функция добавления заметок находится в разработке.\n"
+            f"Используйте команды для работы с заявкой.",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="◀️ Назад к заявке", callback_data=f"app_details_{app_id}")]
+            ])
+        )
+    except Exception as e:
+        logger.error(f"❌ Ошибка добавления заметки: {e}")
+        await callback.answer("❌ Произошла ошибка.")
+
+@application_router.callback_query(F.data == "next_application")
+async def callback_next_application(callback: CallbackQuery):
+    """Показать следующую заявку"""
+    user = callback.from_user
+    telegram_id = int(user.id)
+    
+    try:
+        manager = await manager_service.get_manager_by_telegram_id(telegram_id)
+        if not manager:
+            await callback.answer("❌ Вы не зарегистрированы как менеджер.")
+            return
+        
+        # Получаем следующую новую заявку
+        applications = await manager_service.get_available_new_applications(limit=5)
+        
+        if not applications:
+            await callback.answer("📋 Больше нет новых заявок")
+            return
+        
+        # Показываем вторую заявку (следующую)
+        if len(applications) > 1:
+            app = applications[1]
+            text = format_application_details(app)
+            
+            # Создаем клавиатуру с действиями для заявки
+            keyboard_buttons = []
+            
+            # Кнопка "Взять в работу" для новых заявок
+            keyboard_buttons.append([
+                InlineKeyboardButton(text="✅ Взять в работу", callback_data=f"app_take_{app.id}")
+            ])
+            
+            # Кнопка "Следующая заявка", если есть еще заявки
+            if len(applications) > 2:
+                keyboard_buttons.append([
+                    InlineKeyboardButton(text="➡️ Следующая заявка", callback_data="next_application")
+                ])
+            
+            # Кнопка возврата
+            keyboard_buttons.append([
+                InlineKeyboardButton(text="◀️ Назад к списку", callback_data="applications_menu")
+            ])
+            
+            keyboard = InlineKeyboardMarkup(inline_keyboard=keyboard_buttons)
+            
+            await callback.message.edit_text(text, reply_markup=keyboard)
+        else:
+            await callback.answer("📋 Это была последняя новая заявка")
+    except Exception as e:
+        logger.error(f"❌ Ошибка получения следующей заявки: {e}")
+        await callback.answer("❌ Произошла ошибка.") 
