@@ -279,6 +279,22 @@ function handleWebSocketMessage(data) {
             }
             break;
 
+        case 'manager_message':
+            hideTypingIndicator();
+            addMessage(data.content, 'manager', {
+                timestamp: data.timestamp,
+                sender_name: data.sender_name,
+                chat_id: data.chat_id
+            });
+            break;
+
+        case 'system_message':
+            hideTypingIndicator();
+            addMessage(data.content, 'system', {
+                timestamp: data.timestamp
+            });
+            break;
+
         case 'typing':
             showTypingIndicator();
             break;
@@ -418,16 +434,29 @@ function addMessage(content, sender, metadata = {}) {
     if (sender === 'ai' && metadata.intent) {
         messageDiv.setAttribute('data-intent', metadata.intent);
         messageDiv.setAttribute('data-sender', 'ai');
+    } else if (sender === 'manager') {
+        messageDiv.setAttribute('data-sender', 'manager');
+        messageDiv.setAttribute('data-chat-id', metadata.chat_id || '');
+    } else if (sender === 'system') {
+        messageDiv.setAttribute('data-sender', 'system');
     }
 
     const messageContent = document.createElement('div');
     messageContent.className = 'message-content';
 
-    // Преобразуем Markdown в HTML для сообщений ИИ
-    if (sender === 'ai') {
+    // Преобразуем Markdown в HTML для сообщений ИИ и менеджеров
+    if (sender === 'ai' || sender === 'manager') {
         messageContent.innerHTML = convertMarkdownToHTML(content);
     } else {
         messageContent.textContent = content;
+    }
+
+    // Добавляем имя отправителя для менеджеров
+    if (sender === 'manager' && metadata.sender_name) {
+        const senderLabel = document.createElement('div');
+        senderLabel.className = 'sender-label';
+        senderLabel.textContent = `👨‍💼 ${metadata.sender_name}`;
+        messageDiv.appendChild(senderLabel);
     }
 
     messageDiv.appendChild(messageContent);
@@ -454,7 +483,7 @@ function addMessage(content, sender, metadata = {}) {
     }, 10);
 
     // Добавляем haptic feedback на мобильных устройствах
-    if (sender === 'ai' && isMobile && window.navigator && window.navigator.vibrate) {
+    if ((sender === 'ai' || sender === 'manager') && isMobile && window.navigator && window.navigator.vibrate) {
         window.navigator.vibrate(50);
     }
 
@@ -1422,15 +1451,22 @@ async function requestManagerTransfer() {
             },
             body: JSON.stringify({
                 session_id: sessionId,
-                chat_history: getChatHistory()
+                chat_history: getChatHistory(),
+                client_name: null, // Можно добавить форму для имени клиента
+                client_phone: null // Можно добавить форму для телефона клиента
             })
         });
 
         const result = await response.json();
 
         if (result.success) {
+            // Сохраняем ID чата для отправки сообщений
+            window.managerChatId = result.chat_id;
+            window.supportChatId = result.support_chat_id;
+
             addMessage(
-                '👤 **Менеджер подключен!**\n\nСейчас с вами будет общаться живой специалист ILPO-TAXI. ' +
+                `👤 **Менеджер ${result.manager_name} подключен!**\n\n` +
+                'Сейчас с вами будет общаться живой специалист ILPO-TAXI. ' +
                 'Он поможет с любыми вопросами по подключению и работе.',
                 'system'
             );
@@ -1439,10 +1475,11 @@ async function requestManagerTransfer() {
             transferBtn.style.display = 'none';
 
             // Обновляем статус чата
-            updateChatStatus('manager');
+            updateChatStatus('manager', result.manager_name);
 
         } else {
             addMessage(
+                result.message ||
                 '😔 К сожалению, все менеджеры сейчас заняты. Попробуйте чуть позже или оставьте заявку на сайте.',
                 'system'
             );
@@ -1472,10 +1509,12 @@ function getChatHistory() {
         const time = msg.querySelector('.message-time');
         const isAI = msg.classList.contains('ai-message');
         const isUser = msg.classList.contains('user-message');
+        const isManager = msg.classList.contains('manager-message');
+        const isSystem = msg.classList.contains('system-message');
 
-        if (content && (isAI || isUser)) {
+        if (content && (isAI || isUser || isManager || isSystem)) {
             messages.push({
-                role: isUser ? 'user' : 'assistant',
+                role: isUser ? 'user' : (isAI ? 'assistant' : (isManager ? 'manager' : 'system')),
                 content: content.textContent,
                 timestamp: time ? time.textContent : new Date().toLocaleTimeString()
             });
@@ -1486,12 +1525,12 @@ function getChatHistory() {
 }
 
 // Обновить статус чата
-function updateChatStatus(status) {
+function updateChatStatus(status, managerName = 'ИИ-Консультант') {
     const chatHeader = document.querySelector('.chat-header .chat-info h5');
     const chatStatus = document.querySelector('.chat-header .chat-info .chat-status');
 
     if (status === 'manager') {
-        if (chatHeader) chatHeader.textContent = 'Менеджер ILPO-TAXI';
+        if (chatHeader) chatHeader.textContent = `Менеджер ${managerName}`;
         if (chatStatus) chatStatus.textContent = 'Онлайн';
     } else {
         if (chatHeader) chatHeader.textContent = 'ИИ-Консультант';

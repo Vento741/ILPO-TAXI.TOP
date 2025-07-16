@@ -127,7 +127,7 @@ class ManagerService:
                 logger.error(f"❌ Ошибка изменения статуса менеджера: {e}")
                 return False
     
-    async def get_available_manager(self, exclude_ids: List[str] = None) -> Optional[Manager]:
+    async def get_available_manager(self) -> Optional[Manager]:
         """Найти доступного менеджера для назначения"""
         async with AsyncSessionLocal() as session:
             try:
@@ -140,8 +140,8 @@ class ManagerService:
                 )
                 
                 # Исключаем определенных менеджеров если нужно
-                if exclude_ids:
-                    query = query.where(~Manager.telegram_id.in_(exclude_ids))
+                # if exclude_ids: # This line was removed from the new_code, so it's removed here.
+                #     query = query.where(~Manager.telegram_id.in_(exclude_ids))
                 
                 result = await session.execute(query)
                 managers = result.scalars().all()
@@ -551,9 +551,18 @@ class ManagerService:
                     logger.warning("⚠️ Нет доступных менеджеров для переключения")
                     return None
                 
+                # Подготавливаем метаданные с историей чата
+                chat_metadata = {
+                    "web_session_id": session_id, 
+                    "source": "web_chat",
+                    "chat_history": chat_history,
+                    "created_by": "ai_transfer",
+                    "transfer_timestamp": datetime.utcnow().isoformat()
+                }
+                
                 # Создаем новый чат поддержки
                 support_chat = SupportChat(
-                    chat_id=f"web_{session_id}_{datetime.utcnow().timestamp()}",
+                    chat_id=f"web_{session_id}_{int(datetime.utcnow().timestamp())}",
                     chat_type=ChatType.TRANSFER_FROM_AI,
                     client_name=client_name,
                     client_phone=client_phone,
@@ -562,36 +571,44 @@ class ManagerService:
                     is_ai_handed_over=True,
                     created_at=datetime.utcnow(),
                     last_message_at=datetime.utcnow(),
-                    chat_metadata={"web_session_id": session_id, "source": "web_chat"}
+                    chat_metadata=chat_metadata
                 )
                 
                 session.add(support_chat)
-                await session.flush()  # Получаем ID чата
+                await session.flush()  # Получаем ID
                 
-                # Сохраняем историю чата как сообщения
-                for i, message in enumerate(chat_history):
-                    chat_message = ChatMessage(
-                        chat_id=support_chat.id,
-                        sender_type="client" if message.get("type") == "user" else "system",
-                        sender_name=client_name or "Клиент",
-                        message_text=message.get("content", ""),
-                        message_type="text",
-                        created_at=datetime.utcnow()
-                    )
-                    session.add(chat_message)
-                
-                # Обновляем статус менеджера
-                available_manager.status = ManagerStatus.BUSY
-                available_manager.last_seen = datetime.utcnow()
+                # Сохраняем историю чата как сообщения в БД (для удобства поиска)
+                if chat_history:
+                    for i, msg in enumerate(chat_history):
+                        chat_message = ChatMessage(
+                            chat_id=support_chat.id,
+                            sender_type="ai_history" if msg.get("role") == "assistant" else "client_history",
+                            sender_name=client_name if msg.get("role") == "user" else "ИИ-Консультант",
+                            message_text=msg.get("content", ""),
+                            message_type="text",
+                            created_at=datetime.utcnow() - timedelta(minutes=len(chat_history) - i)  # Искусственно раздвигаем время
+                        )
+                        session.add(chat_message)
                 
                 await session.commit()
                 
-                logger.info(f"✅ Создан чат поддержки {support_chat.chat_id} для менеджера {available_manager.first_name}")
+                # Загружаем связанные объекты
+                await session.refresh(support_chat)
+                result = await session.execute(
+                    select(SupportChat)
+                    .options(selectinload(SupportChat.manager))
+                    .where(SupportChat.id == support_chat.id)
+                )
+                support_chat = result.scalar_one()
+                
+                logger.info(f"✅ Создан чат поддержки {support_chat.chat_id} для сессии {session_id}")
                 return support_chat
                 
             except Exception as e:
                 await session.rollback()
                 logger.error(f"❌ Ошибка создания чата поддержки: {e}")
+                import traceback
+                logger.error(f"Полная ошибка: {traceback.format_exc()}")
                 return None
     
     async def get_available_manager(self) -> Optional[Manager]:
@@ -636,22 +653,179 @@ class ManagerService:
     async def notify_manager_new_chat(self, manager_telegram_id: int, chat: SupportChat):
         """Уведомить менеджера о новом чате (через Telegram)"""
         try:
-            # Здесь будет интеграция с Telegram ботом для отправки уведомления
-            # Пока просто логируем
-            logger.info(f"📬 Уведомление менеджеру {manager_telegram_id} о новом чате {chat.chat_id}")
+            from aiogram import Bot
+            from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+            from aiogram.enums import ParseMode
             
-            # TODO: Реализовать отправку сообщения через Telegram бота
-            # await telegram_bot.send_message(
-            #     chat_id=manager_telegram_id,
-            #     text=f"🆕 Новый чат от веб-клиента\n"
-            #          f"👤 Клиент: {chat.client_name or 'Не указано'}\n"
-            #          f"📞 Телефон: {chat.client_phone or 'Не указано'}\n"
-            #          f"💬 ID чата: {chat.chat_id}"
-            # )
+            bot = Bot(token=settings.TELEGRAM_BOT_TOKEN)
+            
+            # Получаем историю чата из метаданных
+            chat_history = chat.chat_metadata.get("chat_history", []) if chat.chat_metadata else []
+            history_text = ""
+            
+            if chat_history:
+                history_text = "\n\n💬 **История переписки с ИИ:**\n"
+                for msg in chat_history[-3:]:  # Последние 3 сообщения
+                    role_emoji = "👤" if msg.get("role") == "user" else "🤖"
+                    content = msg.get("content", "")[:100] + ("..." if len(msg.get("content", "")) > 100 else "")
+                    history_text += f"{role_emoji} {content}\n"
+            
+            text = f"""
+🆕 **НОВЫЙ ЧАТ ОТ ВЕБ-КЛИЕНТА**
+
+👤 **Клиент:** {chat.client_name or 'Не указано'}
+📞 **Телефон:** {chat.client_phone or 'Не указано'}
+💬 **ID чата:** `{chat.chat_id}`
+🕐 **Время:** {chat.created_at.strftime('%d.%m.%Y %H:%M')}
+
+ℹ️ Клиент был переключен с ИИ-консультанта на живого менеджера.{history_text}
+
+**Используйте кнопки ниже для работы с чатом:**
+            """
+            
+            keyboard = InlineKeyboardMarkup(inline_keyboard=[
+                [
+                    InlineKeyboardButton(
+                        text="✅ Принять чат", 
+                        callback_data=f"accept_chat_{chat.id}"
+                    ),
+                    InlineKeyboardButton(
+                        text="📋 Подробности", 
+                        callback_data=f"chat_details_{chat.id}"
+                    )
+                ],
+                [
+                    InlineKeyboardButton(
+                        text="📞 Позвонить", 
+                        url=f"tel:{chat.client_phone}" if chat.client_phone else "https://ilpo-taxi.top"
+                    )
+                ],
+                [
+                    InlineKeyboardButton(
+                        text="💬 Активные чаты", 
+                        callback_data="active_chats"
+                    )
+                ]
+            ])
+            
+            await bot.send_message(
+                chat_id=manager_telegram_id,
+                text=text,
+                reply_markup=keyboard,
+                parse_mode=ParseMode.MARKDOWN
+            )
+            
+            # Добавляем чат в активные чаты менеджера в Redis
+            await redis_service.add_manager_active_chat(
+                str(manager_telegram_id), 
+                chat.chat_id
+            )
+            
+            logger.info(f"✅ Менеджер {manager_telegram_id} уведомлен о новом чате {chat.chat_id}")
             
         except Exception as e:
             logger.error(f"❌ Ошибка отправки уведомления менеджеру: {e}")
+            import traceback
+            logger.error(f"Полная ошибка: {traceback.format_exc()}")
+    
+    async def send_message_to_manager(
+        self, 
+        chat_id: str, 
+        message_text: str, 
+        client_name: str = None
+    ) -> bool:
+        """Отправить сообщение от веб-клиента менеджеру в Telegram"""
+        try:
+            from aiogram import Bot
+            from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+            
+            # Находим чат поддержки
+            async with AsyncSessionLocal() as session:
+                result = await session.execute(
+                    select(SupportChat)
+                    .options(selectinload(SupportChat.manager))
+                    .where(SupportChat.chat_id == chat_id)
+                )
+                support_chat = result.scalar_one_or_none()
+                
+                if not support_chat or not support_chat.manager:
+                    logger.error(f"❌ Чат {chat_id} не найден или не назначен менеджер")
+                    return False
+                
+                if not support_chat.is_active:
+                    logger.error(f"❌ Чат {chat_id} неактивен")
+                    return False
+                
+                bot = Bot(token=settings.TELEGRAM_BOT_TOKEN)
+                
+                # Обрезаем длинное сообщение
+                display_message = message_text
+                if len(message_text) > 1000:
+                    display_message = message_text[:1000] + "...\n\n[Сообщение сокращено]"
+                
+                text = f"""
+💬 **СООБЩЕНИЕ ИЗ ВЕБ-ЧАТА**
 
+👤 **От:** {client_name or support_chat.client_name or 'Клиент'}
+💬 **Чат:** `{chat_id}`
+
+**Сообщение:**
+{display_message}
+                """
+                
+                keyboard = InlineKeyboardMarkup(inline_keyboard=[
+                    [
+                        InlineKeyboardButton(
+                            text="💬 Ответить", 
+                            callback_data=f"reply_chat_{support_chat.id}"
+                        ),
+                        InlineKeyboardButton(
+                            text="📋 Подробности чата", 
+                            callback_data=f"chat_details_{support_chat.id}"
+                        )
+                    ],
+                    [
+                        InlineKeyboardButton(
+                            text="🔚 Завершить чат", 
+                            callback_data=f"close_chat_{support_chat.id}"
+                        )
+                    ]
+                ])
+                
+                await bot.send_message(
+                    chat_id=support_chat.manager.telegram_id,
+                    text=text,
+                    reply_markup=keyboard,
+                    parse_mode="Markdown"
+                )
+                
+                # Сохраняем сообщение в БД
+                from telegram_bot.models.support_models import ChatMessage
+                new_message = ChatMessage(
+                    chat_id=support_chat.id,
+                    sender_type="client",
+                    sender_name=client_name or support_chat.client_name,
+                    message_text=message_text,
+                    message_type="text",
+                    created_at=datetime.utcnow()
+                )
+                
+                session.add(new_message)
+                
+                # Обновляем время последнего сообщения
+                support_chat.last_message_at = datetime.utcnow()
+                
+                await session.commit()
+                
+                logger.info(f"✅ Сообщение от веб-клиента переслано менеджеру {support_chat.manager.telegram_id}")
+                return True
+                
+        except Exception as e:
+            logger.error(f"❌ Ошибка отправки сообщения менеджеру: {e}")
+            import traceback
+            logger.error(f"Полная ошибка: {traceback.format_exc()}")
+            return False
+    
     async def get_manager_detailed_stats(self, telegram_id: int) -> Optional[Dict[str, Any]]:
         """Получить детальную статистику менеджера"""
         async with AsyncSessionLocal() as session:

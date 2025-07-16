@@ -8,11 +8,16 @@ from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from datetime import datetime
+import json
 
 from telegram_bot.services.manager_service import manager_service
 from telegram_bot.services.redis_service import redis_service
-from telegram_bot.models.support_models import ManagerStatus, ApplicationStatus
+from telegram_bot.models.support_models import ManagerStatus, ApplicationStatus, SupportChat, ChatMessage
 from telegram_bot.config.settings import settings
+
+# Добавляем импорты для работы с чатами
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 logger = logging.getLogger(__name__)
 
@@ -281,7 +286,7 @@ async def cmd_chats(message: Message):
 
 # Команда /status - НОВАЯ
 @base_router.message(Command("status"))
-async def cmd_status(message: Message):
+async def cmd_status(message: Message, state: FSMContext):
     """Изменить статус менеджера"""
     user = message.from_user
     telegram_id = int(user.id)
@@ -505,6 +510,34 @@ async def cmd_help(message: Message):
     """
     
     await message.answer(help_text)
+
+# Команда /cancel
+@base_router.message(Command("cancel"))
+async def cmd_cancel(message: Message, state: FSMContext):
+    """Отмена текущего действия"""
+    user = message.from_user
+    telegram_id = int(user.id)
+    
+    try:
+        # Очищаем состояние
+        await state.clear()
+        
+        # Устанавливаем базовое состояние
+        manager = await manager_service.get_manager_by_telegram_id(telegram_id)
+        if manager and manager.status == ManagerStatus.ONLINE:
+            await state.set_state(ManagerStates.ONLINE)
+        else:
+            await state.set_state(ManagerStates.OFFLINE)
+        
+        await message.reply(
+            "✅ **Действие отменено**\n\n"
+            "Вы вернулись в обычный режим. Используйте /start для главного меню.",
+            parse_mode="Markdown"
+        )
+    
+    except Exception as e:
+        logger.error(f"❌ Ошибка отмены действия: {e}")
+        await message.reply("❌ Произошла ошибка при отмене.")
 
 # Обработчики callback кнопок
 @base_router.callback_query(F.data == "confirm_offline")
@@ -1070,6 +1103,362 @@ async def callback_all_applications(callback: CallbackQuery):
     except Exception as e:
         logger.error(f"❌ Ошибка перенаправления на управление заявками: {e}")
         await callback.answer("❌ Произошла ошибка при получении заявок")
+
+# НОВЫЕ ОБРАБОТЧИКИ ДЛЯ ВЕБ-ЧАТОВ
+
+@base_router.callback_query(F.data.startswith("accept_chat_"))
+async def callback_accept_chat(callback: CallbackQuery, state: FSMContext):
+    """Принять веб-чат"""
+    user = callback.from_user
+    telegram_id = int(user.id)
+    
+    try:
+        chat_id = int(callback.data.split("_")[-1])
+        
+        manager = await manager_service.get_manager_by_telegram_id(telegram_id)
+        if not manager:
+            await callback.answer("❌ Вы не зарегистрированы как менеджер.")
+            return
+        
+        # Обновляем статус чата
+        from telegram_bot.models.database import AsyncSessionLocal
+        async with AsyncSessionLocal() as session:
+            support_chat = await session.get(SupportChat, chat_id)
+            if not support_chat:
+                await callback.answer("❌ Чат не найден.")
+                return
+            
+            if support_chat.manager_id != manager.id:
+                await callback.answer("❌ Этот чат назначен другому менеджеру.")
+                return
+            
+            # Отмечаем чат как принятый
+            support_chat.chat_metadata = support_chat.chat_metadata or {}
+            support_chat.chat_metadata["accepted_at"] = datetime.utcnow().isoformat()
+            support_chat.chat_metadata["accepted_by"] = telegram_id
+            
+            await session.commit()
+        
+        # Обновляем сообщение с новой клавиатурой
+        text = f"""
+✅ **ЧАТ ПРИНЯТ В РАБОТУ**
+
+👤 **Клиент:** {support_chat.client_name or 'Не указано'}
+📞 **Телефон:** {support_chat.client_phone or 'Не указано'}
+💬 **ID чата:** `{support_chat.chat_id}`
+🕐 **Принят:** {datetime.utcnow().strftime('%d.%m.%Y %H:%M')}
+
+Теперь вы можете общаться с клиентом. Ответьте на это сообщение, чтобы отправить сообщение клиенту.
+        """
+        
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="💬 Ответить клиенту", 
+                    callback_data=f"reply_chat_{chat_id}"
+                ),
+                InlineKeyboardButton(
+                    text="📋 История чата", 
+                    callback_data=f"chat_history_{chat_id}"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="📞 Позвонить", 
+                    url=f"tel:{support_chat.client_phone}" if support_chat.client_phone else "https://ilpo-taxi.top"
+                ),
+                InlineKeyboardButton(
+                    text="🔚 Завершить", 
+                    callback_data=f"close_chat_{chat_id}"
+                )
+            ]
+        ])
+        
+        await callback.message.edit_text(text, reply_markup=keyboard, parse_mode="Markdown")
+        await state.set_state(ManagerStates.HANDLING_CHAT)
+        
+    except Exception as e:
+        logger.error(f"❌ Ошибка принятия чата: {e}")
+        await callback.answer("❌ Произошла ошибка.")
+
+@base_router.callback_query(F.data.startswith("reply_chat_"))
+async def callback_reply_chat(callback: CallbackQuery, state: FSMContext):
+    """Инициировать ответ на веб-чат"""
+    user = callback.from_user
+    telegram_id = int(user.id)
+    
+    try:
+        chat_id = int(callback.data.split("_")[-1])
+        
+        # Сохраняем ID чата в состоянии для следующего сообщения
+        await state.update_data(active_web_chat_id=chat_id)
+        await state.set_state(ManagerStates.HANDLING_CHAT)
+        
+        await callback.message.reply(
+            "💬 **Режим ответа клиенту активирован**\n\n"
+            "Напишите ваш ответ следующим сообщением, и он будет отправлен клиенту в веб-чат.\n"
+            "Для отмены используйте /cancel",
+            parse_mode="Markdown"
+        )
+        
+    except Exception as e:
+        logger.error(f"❌ Ошибка активации режима ответа: {e}")
+        await callback.answer("❌ Произошла ошибка.")
+
+@base_router.callback_query(F.data.startswith("chat_details_"))
+async def callback_chat_details(callback: CallbackQuery):
+    """Показать подробности чата"""
+    user = callback.from_user
+    telegram_id = int(user.id)
+    
+    try:
+        chat_id = int(callback.data.split("_")[-1])
+        
+        from telegram_bot.models.database import AsyncSessionLocal
+        async with AsyncSessionLocal() as session:
+            result = await session.execute(
+                select(SupportChat)
+                .options(selectinload(SupportChat.manager))
+                .where(SupportChat.id == chat_id)
+            )
+            support_chat = result.scalar_one_or_none()
+            
+            if not support_chat:
+                await callback.answer("❌ Чат не найден.")
+                return
+            
+            # Получаем последние сообщения
+            messages_result = await session.execute(
+                select(ChatMessage)
+                .where(ChatMessage.chat_id == chat_id)
+                .order_by(ChatMessage.created_at.desc())
+                .limit(5)
+            )
+            recent_messages = list(reversed(messages_result.scalars().all()))
+            
+            # Формируем детальную информацию
+            details_text = f"""
+📋 **ПОДРОБНОСТИ ЧАТА**
+
+👤 **Клиент:** {support_chat.client_name or 'Не указано'}
+📞 **Телефон:** {support_chat.client_phone or 'Не указано'}
+💬 **ID чата:** `{support_chat.chat_id}`
+👨‍💼 **Менеджер:** {support_chat.manager.first_name if support_chat.manager else 'Не назначен'}
+
+🕐 **Создан:** {support_chat.created_at.strftime('%d.%m.%Y %H:%M')}
+🕐 **Последнее сообщение:** {support_chat.last_message_at.strftime('%d.%m.%Y %H:%M') if support_chat.last_message_at else 'Нет'}
+📊 **Статус:** {'🟢 Активен' if support_chat.is_active else '🔴 Закрыт'}
+🤖 **Передан от ИИ:** {'Да' if support_chat.is_ai_handed_over else 'Нет'}
+
+📝 **Последние сообщения:**
+            """
+            
+            if recent_messages:
+                for msg in recent_messages:
+                    sender_emoji = "👤" if "client" in msg.sender_type else "👨‍💼" if "manager" in msg.sender_type else "🤖"
+                    time_str = msg.created_at.strftime('%H:%M')
+                    content = msg.message_text[:100] + ("..." if len(msg.message_text) > 100 else "")
+                    details_text += f"\n{sender_emoji} {time_str}: {content}"
+            else:
+                details_text += "\nСообщений пока нет"
+            
+            keyboard = InlineKeyboardMarkup(inline_keyboard=[
+                [
+                    InlineKeyboardButton(
+                        text="💬 Ответить", 
+                        callback_data=f"reply_chat_{chat_id}"
+                    ),
+                    InlineKeyboardButton(
+                        text="📝 Вся история", 
+                        callback_data=f"chat_history_{chat_id}"
+                    )
+                ],
+                [
+                    InlineKeyboardButton(
+                        text="🔚 Завершить чат", 
+                        callback_data=f"close_chat_{chat_id}"
+                    )
+                ]
+            ])
+            
+            await callback.message.edit_text(details_text, reply_markup=keyboard, parse_mode="Markdown")
+        
+    except Exception as e:
+        logger.error(f"❌ Ошибка получения деталей чата: {e}")
+        await callback.answer("❌ Произошла ошибка.")
+
+@base_router.callback_query(F.data.startswith("close_chat_"))
+async def callback_close_chat(callback: CallbackQuery):
+    """Закрыть веб-чат"""
+    user = callback.from_user
+    telegram_id = int(user.id)
+    
+    try:
+        chat_id = int(callback.data.split("_")[-1])
+        
+        from telegram_bot.models.database import AsyncSessionLocal
+        async with AsyncSessionLocal() as session:
+            support_chat = await session.get(SupportChat, chat_id)
+            if not support_chat:
+                await callback.answer("❌ Чат не найден.")
+                return
+            
+            manager = await manager_service.get_manager_by_telegram_id(telegram_id)
+            if not manager or support_chat.manager_id != manager.id:
+                await callback.answer("❌ У вас нет прав закрыть этот чат.")
+                return
+            
+            # Закрываем чат
+            support_chat.is_active = False
+            support_chat.closed_at = datetime.utcnow()
+            
+            # Добавляем системное сообщение
+            close_message = ChatMessage(
+                chat_id=support_chat.id,
+                sender_type="system",
+                sender_name="Система",
+                message_text=f"Чат завершен менеджером {manager.first_name}",
+                message_type="system",
+                created_at=datetime.utcnow()
+            )
+            session.add(close_message)
+            
+            await session.commit()
+            
+            # Удаляем из активных чатов менеджера
+            await redis_service.remove_manager_active_chat(
+                str(telegram_id), 
+                support_chat.chat_id
+            )
+            
+            text = f"""
+🔚 **ЧАТ ЗАВЕРШЕН**
+
+👤 **Клиент:** {support_chat.client_name or 'Не указано'}
+💬 **ID чата:** `{support_chat.chat_id}`
+🕐 **Завершен:** {datetime.utcnow().strftime('%d.%m.%Y %H:%M')}
+
+Чат успешно закрыт. Клиент больше не сможет отправлять сообщения.
+            """
+            
+            keyboard = InlineKeyboardMarkup(inline_keyboard=[
+                [
+                    InlineKeyboardButton(
+                        text="💬 Мои активные чаты", 
+                        callback_data="active_chats"
+                    )
+                ],
+                [
+                    InlineKeyboardButton(
+                        text="◀️ Главное меню", 
+                        callback_data="back_to_main"
+                    )
+                ]
+            ])
+            
+            await callback.message.edit_text(text, reply_markup=keyboard, parse_mode="Markdown")
+        
+    except Exception as e:
+        logger.error(f"❌ Ошибка закрытия чата: {e}")
+        await callback.answer("❌ Произошла ошибка.")
+
+# Обработчик сообщений в режиме ответа клиенту
+@base_router.message(StateFilter(ManagerStates.HANDLING_CHAT))
+async def handle_manager_reply(message: Message, state: FSMContext):
+    """Обработка ответа менеджера клиенту"""
+    user = message.from_user
+    telegram_id = int(user.id)
+    
+    try:
+        data = await state.get_data()
+        chat_id = data.get("active_web_chat_id")
+        
+        if not chat_id:
+            await message.reply("❌ Активный чат не найден. Используйте кнопки для выбора чата.")
+            return
+        
+        # Отправляем сообщение в веб-чат через WebSocket
+        success = await send_manager_message_to_webchat(
+            chat_id=chat_id,
+            message_text=message.text,
+            manager_telegram_id=telegram_id
+        )
+        
+        if success:
+            await message.reply("✅ Сообщение отправлено клиенту в веб-чат")
+        else:
+            await message.reply("❌ Не удалось отправить сообщение. Возможно, клиент отключился.")
+        
+        # Очищаем состояние
+        await state.update_data(active_web_chat_id=None)
+        await state.set_state(ManagerStates.ONLINE)
+        
+    except Exception as e:
+        logger.error(f"❌ Ошибка отправки ответа менеджера: {e}")
+        await message.reply("❌ Произошла ошибка при отправке сообщения.")
+
+async def send_manager_message_to_webchat(chat_id: int, message_text: str, manager_telegram_id: int) -> bool:
+    """Отправить сообщение менеджера в веб-чат"""
+    try:
+        from telegram_bot.models.database import AsyncSessionLocal
+        
+        async with AsyncSessionLocal() as session:
+            # Получаем информацию о чате и менеджере
+            result = await session.execute(
+                select(SupportChat)
+                .options(selectinload(SupportChat.manager))
+                .where(SupportChat.id == chat_id)
+            )
+            support_chat = result.scalar_one_or_none()
+            
+            if not support_chat or not support_chat.manager:
+                logger.error(f"❌ Чат {chat_id} не найден")
+                return False
+            
+            # Сохраняем сообщение в БД
+            manager_message = ChatMessage(
+                chat_id=support_chat.id,
+                sender_type="manager",
+                sender_name=support_chat.manager.first_name,
+                message_text=message_text,
+                message_type="text",
+                created_at=datetime.utcnow()
+            )
+            
+            session.add(manager_message)
+            support_chat.last_message_at = datetime.utcnow()
+            
+            await session.commit()
+            
+            # Отправляем через WebSocket (если есть подключение)
+            # Здесь должна быть интеграция с WebSocket менеджером
+            web_session_id = support_chat.chat_metadata.get("web_session_id") if support_chat.chat_metadata else None
+            
+            if web_session_id:
+                # Импортируем менеджер соединений из chat_routes
+                from routers.chat_routes import manager as connection_manager
+                
+                message_data = {
+                    "type": "manager_message",
+                    "content": message_text,
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "sender_name": support_chat.manager.first_name,
+                    "chat_id": support_chat.chat_id
+                }
+                
+                await connection_manager.send_to_session(
+                    web_session_id, 
+                    json.dumps(message_data, ensure_ascii=False)
+                )
+            
+            logger.info(f"✅ Сообщение менеджера отправлено в веб-чат {support_chat.chat_id}")
+            return True
+            
+    except Exception as e:
+        logger.error(f"❌ Ошибка отправки сообщения в веб-чат: {e}")
+        import traceback
+        logger.error(f"Полная ошибка: {traceback.format_exc()}")
+        return False
 
 # Функции для создания клавиатур
 def get_manager_main_keyboard(is_admin: bool = False, manager_status: str = "offline") -> InlineKeyboardMarkup:

@@ -151,6 +151,46 @@ async def websocket_chat(websocket: WebSocket, session_id: str = Query(None)):
             
             print(f"💬 Получено сообщение в сессии {session_id}: {user_message}")
             
+            # Проверяем, передан ли чат менеджеру
+            from telegram_bot.services.manager_service import manager_service
+            
+            # Ищем активный чат поддержки для этой сессии
+            web_chat_id = f"web_{session_id}"
+            support_chat = await check_if_transferred_to_manager(session_id)
+            
+            if support_chat and support_chat.is_active:
+                # Чат передан менеджеру - пересылаем сообщение
+                success = await manager_service.send_message_to_manager(
+                    chat_id=support_chat.chat_id,
+                    message_text=user_message,
+                    client_name=support_chat.client_name
+                )
+                
+                if success:
+                    # Добавляем сообщение пользователя в историю
+                    await chat_manager.add_message(session_id, "user", user_message)
+                    
+                    # Отправляем подтверждение пользователю
+                    confirmation_message = {
+                        "type": "system_message",
+                        "content": "✅ Ваше сообщение отправлено менеджеру. Ожидайте ответа.",
+                        "timestamp": datetime.now().isoformat(),
+                        "session_id": session_id
+                    }
+                    await manager.send_personal_message(json.dumps(confirmation_message), websocket)
+                else:
+                    # Ошибка отправки
+                    error_message = {
+                        "type": "system_message",
+                        "content": "❌ Не удалось отправить сообщение менеджеру. Попробуйте позже.",
+                        "timestamp": datetime.now().isoformat(),
+                        "session_id": session_id
+                    }
+                    await manager.send_personal_message(json.dumps(error_message), websocket)
+                
+                continue  # Не обрабатываем через ИИ
+            
+            # Чат не передан менеджеру - обычная обработка через ИИ
             # Добавляем сообщение пользователя в историю
             await chat_manager.add_message(session_id, "user", user_message)
             
@@ -324,7 +364,7 @@ async def transfer_to_manager(request: Request):
         # Импортируем сервис менеджеров
         from telegram_bot.services.manager_service import manager_service
         
-        # Создаем чат поддержки
+        # Создаем чат поддержки с сохранением истории
         support_chat = await manager_service.create_support_chat(
             session_id=session_id,
             chat_history=chat_history,
@@ -350,67 +390,45 @@ async def transfer_to_manager(request: Request):
         
         return {
             "success": True,
-            "message": f"Вы переключены на менеджера {manager.first_name}. Ожидайте ответа.",
+            "message": "Менеджер подключен!",
+            "manager_name": manager.first_name if manager else "Менеджер",
             "chat_id": support_chat.chat_id,
-            "manager_name": f"{manager.first_name} {manager.last_name or ''}".strip()
+            "support_chat_id": support_chat.id
         }
         
     except Exception as e:
         logger.error(f"❌ Ошибка переключения на менеджера: {e}")
         return {
             "success": False,
-            "error": "Внутренняя ошибка сервера",
-            "message": "Произошла ошибка. Попробуйте позже."
+            "error": "Внутренняя ошибка сервера"
         }
 
 @chat_router.post("/api/chat/send-message")
 async def send_message_to_support(request: Request):
-    """Отправить сообщение в чат поддержки"""
+    """Отправить сообщение от веб-клиента менеджеру в Telegram"""
     try:
         data = await request.json()
         chat_id = data.get("chat_id")
-        message_text = data.get("message")
-        client_name = data.get("client_name", "Клиент")
+        message_text = data.get("message_text", "").strip()
+        client_name = data.get("client_name")
         
         if not chat_id or not message_text:
-            return {"success": False, "error": "chat_id и message обязательные"}
+            return {"success": False, "error": "chat_id и message_text обязательны"}
         
-        from telegram_bot.models.database import AsyncSessionLocal
-        from telegram_bot.models.support_models import SupportChat, ChatMessage
-        from sqlalchemy import select
-        from datetime import datetime
+        # Импортируем сервис менеджеров
+        from telegram_bot.services.manager_service import manager_service
         
-        async with AsyncSessionLocal() as session:
-            # Находим чат
-            result = await session.execute(
-                select(SupportChat).where(SupportChat.chat_id == chat_id)
-            )
-            support_chat = result.scalar_one_or_none()
-            
-            if not support_chat or not support_chat.is_active:
-                return {"success": False, "error": "Чат не найден или неактивен"}
-            
-            # Создаем новое сообщение
-            new_message = ChatMessage(
-                chat_id=support_chat.id,
-                sender_type="client",
-                sender_name=client_name,
-                message_text=message_text,
-                message_type="text",
-                created_at=datetime.utcnow()
-            )
-            
-            session.add(new_message)
-            
-            # Обновляем время последнего сообщения в чате
-            support_chat.last_message_at = datetime.utcnow()
-            
-            await session.commit()
-            
-            # TODO: Отправить уведомление менеджеру через Telegram
-            logger.info(f"📨 Новое сообщение в чате {chat_id} от клиента")
-            
-            return {"success": True, "message": "Сообщение отправлено"}
+        # Отправляем сообщение менеджеру через Telegram
+        success = await manager_service.send_message_to_manager(
+            chat_id=chat_id,
+            message_text=message_text,
+            client_name=client_name
+        )
+        
+        if success:
+            return {"success": True, "message": "Сообщение отправлено менеджеру"}
+        else:
+            return {"success": False, "error": "Не удалось отправить сообщение"}
         
     except Exception as e:
         logger.error(f"❌ Ошибка отправки сообщения: {e}")
@@ -418,6 +436,31 @@ async def send_message_to_support(request: Request):
             "success": False,
             "error": "Внутренняя ошибка сервера"
         }
+
+async def check_if_transferred_to_manager(session_id: str):
+    """Проверить, передан ли веб-чат менеджеру"""
+    try:
+        from telegram_bot.models.database import AsyncSessionLocal
+        from telegram_bot.models.support_models import SupportChat
+        from sqlalchemy import select
+        from sqlalchemy.orm import selectinload
+        
+        async with AsyncSessionLocal() as session:
+            # Ищем активный чат поддержки с указанным web_session_id
+            result = await session.execute(
+                select(SupportChat)
+                .options(selectinload(SupportChat.manager))
+                .where(
+                    SupportChat.chat_metadata['web_session_id'].astext == session_id,
+                    SupportChat.is_active == True
+                )
+            )
+            support_chat = result.scalar_one_or_none()
+            return support_chat
+            
+    except Exception as e:
+        logger.error(f"❌ Ошибка проверки передачи чата менеджеру: {e}")
+        return None
 
 @chat_router.get("/api/chat/{chat_id}/messages")
 async def get_chat_messages(chat_id: str, limit: int = 50):
