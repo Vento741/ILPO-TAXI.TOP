@@ -882,4 +882,131 @@
         padding: 0.7rem;
         font-size: 0.95rem;
     }
+    /* =============================================================================
+       ОПТИМИЗАЦИЯ ПРОИЗВОДИТЕЛЬНОСТИ ДЛЯ МОБИЛЬНЫХ УСТРОЙСТВ
+       ============================================================================= */
+    /* Отключение тяжелых анимаций и эффектов для улучшения производительности */
+    /* Упрощение glitch-эффекта в навигации */
+    .glitch-logo {
+        animation: none !important;
+    }
+    .header-nav.scrolled .glitch-logo {
+        animation: none !important;
+    }
+    .navbar-brand.glitch-brand:hover .glitch-logo {
+        animation: none !important;
+    }
+    .glitch-logo::before,
+    .glitch-logo::after {
+        display: none !important;
+    }
+    /* Упрощение hero секции - отключение тяжелого фона */
+    .hero {
+        /* Простой градиент вместо сложного фона */
+        background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0a0a0a 100%) !important;
+        animation: none !important;
+    }
+    .hero::before {
+        display: none !important;
+    }
+    .hero::after {
+        display: none !important;
+    }
+    /* Отключение backdrop-filter для улучшения производительности */
+    .signup-promo-card,
+    .ai-promo-card {
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        background: rgba(33, 32, 31, 0.95) !important;
+    }
+    .hero-stat-item {
+        backdrop-filter: none !important;
+        background: rgba(255, 255, 255, 0.15) !important;
+    }
+    /* Упрощение анимаций в hero */
+    .hero-title .text-primary::before {
+        display: none !important;
+    }
+    .hero-title .text-primary {
+        animation: none !important;
+    }
+    /* Отключение постоянных анимаций */
+    .ai-avatar {
+        animation: none !important;
+    }
+    .ai-avatar::after {
+        display: none !important;
+    }
+    /* Упрощение иконок в benefits */
+    .icon-glow {
+        animation: none !important;
+    }
+    .ai-glow {
+        animation: none !important;
+    }
+    /* Отключение floating элементов */
+    .benefits-modern::after,
+    .process-modern::after,
+    .calculator::after,
+    .faq::after {
+        display: none !important;
+    }
+    /* Упрощение переходов */
+    .benefit-card-modern::before {
+        display: none !important;
+    }
+    .benefit-card-modern:hover {
+        transform: none !important;
+    }
+    /* Отключение сложных анимаций в process */
+    .step-number {
+        animation: none !important;
+    }
+    /* Оптимизация чата */
+    .chat-widget {
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+    }
+    .chat-header {
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+    }
+    /* Отключение анимаций печати в чате */
+    .typing-dots span {
+        animation-duration: 2s !important;
+    }
+    /* Упрощение hover эффектов */
+    .faq-item:hover {
+        transform: none !important;
+    }
+    .review-card:hover {
+        transform: none !important;
+    }
+    /* Отключение transform для улучшения производительности */
+    .timeline-step:hover {
+        transform: none !important;
+    }
+    /* Предпочтение производительности перед красотой */
+    * {
+        will-change: auto !important;
+    }
+    /* Упрощение градиентов для лучшей производительности */
+    .btn-primary {
+        background: var(--yandex-yellow) !important;
+        box-shadow: none !important;
+    }
+    .btn-primary::before {
+        display: none !important;
+    }
+    /* Отключение сложных теней */
+    .benefit-card-modern,
+    .review-card,
+    .faq-item {
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+    }
+    .benefit-card-modern:hover,
+    .review-card:hover,
+    .faq-item:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+    }
 }

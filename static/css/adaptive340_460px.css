@@ -906,4 +906,95 @@
     .footer-legal a:hover {
         color: var(--primary-color);
     }
+    /* =============================================================================
+       АГРЕССИВНАЯ ОПТИМИЗАЦИЯ ПРОИЗВОДИТЕЛЬНОСТИ ДЛЯ МАЛЕНЬКИХ ЭКРАНОВ
+       ============================================================================= */
+    /* Максимальная оптимизация для слабых устройств */
+    /* Полное отключение всех анимаций */
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0s !important;
+        animation-delay: 0s !important;
+        transition-duration: 0s !important;
+        transition-delay: 0s !important;
+    }
+    /* Отключение всех псевдоэлементов с анимациями */
+    .glitch-logo::before,
+    .glitch-logo::after,
+    .hero::before,
+    .hero::after,
+    .ai-avatar::after,
+    .hero-title .text-primary::before,
+    .benefits-modern::after,
+    .process-modern::after,
+    .calculator::after,
+    .faq::after,
+    .benefit-card-modern::before {
+        display: none !important;
+    }
+    /* Простой фон для hero */
+    .hero {
+        background: #1a1a1a !important;
+    }
+    /* Отключение всех backdrop-filter */
+    * {
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+    }
+    /* Упрощение карточек */
+    .signup-promo-card,
+    .ai-promo-card,
+    .hero-stat-item {
+        background: rgba(33, 32, 31, 0.9) !important;
+        border: 1px solid rgba(255, 219, 77, 0.3) !important;
+    }
+    /* Отключение всех transform при hover */
+    *:hover {
+        transform: none !important;
+    }
+    /* Упрощение градиентов */
+    .btn-primary,
+    .hero-title .text-primary {
+        background: var(--yandex-yellow) !important;
+        color: var(--yandex-black) !important;
+        -webkit-background-clip: initial !important;
+        -webkit-text-fill-color: initial !important;
+        background-clip: initial !important;
+    }
+    /* Простые тени */
+    .benefit-card-modern,
+    .review-card,
+    .faq-item,
+    .calculator-card {
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+    }
+    /* Отключение will-change для экономии памяти */
+    * {
+        will-change: auto !important;
+    }
+    /* Оптимизация чата для слабых устройств */
+    .chat-widget {
+        background: rgba(255, 255, 255, 0.98) !important;
+    }
+    .chat-body {
+        background: white !important;
+    }
+    /* Упрощение typing indicator */
+    .typing-dots span {
+        animation: none !important;
+        opacity: 0.6 !important;
+    }
+    /* Предотвращение ненужных repaint */
+    .navbar-nav .nav-link::after {
+        display: none !important;
+    }
+    /* GPU оптимизация */
+    .hero,
+    .chat-widget,
+    .signup-promo-card,
+    .ai-promo-card {
+        transform: translateZ(0) !important;
+        backface-visibility: hidden !important;
+    }
 }
