@@ -591,12 +591,20 @@ def format_application_details(application: Application) -> str:
     schedule_map = {"full_time": "Полный день", "part_time": "Неполный день", "flexible": "Гибкий график"}
     license_map = {"yes": "✅ Есть", "getting": "⏳ В процессе получения", "no": "❌ Нет"}
     car_map = {"own": "🚗 Собственный", "rent": "Аренда", "provided": "Предоставят", "no": "❌ Нет"}
+    car_class_map = {
+        "economy": "Эконом", "comfort": "Комфорт", "comfort_plus": "Комфорт+",
+        "business": "Бизнес"
+    }
     permit_map = {"yes": "✅ Есть", "no": "❌ Нет", "help_needed": "ℹ️ Нужна помощь"}
     experience_map = {"no": "Нет опыта", "less_year": "Менее года", "1_3_years": "1-3 года", "3_plus_years": "Более 3 лет"}
     docs_map = {
         "passport": "Паспорт", "driver_license": "Вод. удостоверение", "snils": "СНИЛС",
         "inn": "ИНН", "car_docs": "Документы на авто", "medical_cert": "Мед. справка",
         "work_permit": "Разрешение на работу"
+    }
+    status_map = {
+        "new": "🆕 Новая", "assigned": "👤 Назначена", "in_progress": "⚙️ В работе",
+        "waiting_client": "⏳ Ожидание клиента", "completed": "✅ Завершена", "cancelled": "❌ Отменена"
     }
 
     def format_bool(value: Optional[bool]) -> str:
@@ -654,7 +662,7 @@ def format_application_details(application: Application) -> str:
             car_year = f" ({application.car_year} г.)" if application.car_year else ""
             category_info.append(f"  • <b>Автомобиль:</b> {h(application.car_brand)} {h(application.car_model)}{h(car_year)}")
         if application.car_class:
-            category_info.append(f"  • <b>Желаемый класс:</b> {h(application.car_class)}")
+            category_info.append(f"  • <b>Желаемый класс:</b> {car_class_map.get(application.car_class, h(application.car_class))}")
         if application.has_taxi_permit:
             category_info.append(f"  • <b>Разрешение такси:</b> {permit_map.get(application.has_taxi_permit, h(application.has_taxi_permit))}")
 
@@ -702,7 +710,7 @@ def format_application_details(application: Application) -> str:
         
     # --- Служебная информация ---
     text += f"\n- - - - - - - - - - - - - - - - - -\n"
-    text += f"<b>Статус:</b> {h(application.status.value.upper())}\n"
+    text += f"<b>Статус:</b> {status_map.get(application.status.value, h(application.status.value.upper()))}\n"
     text += f"<b>Подана:</b> {application.created_at.strftime('%d.%m.%Y %H:%M')}\n"
     if application.processed_at:
         text += f"<b>Обработана:</b> {application.processed_at.strftime('%d.%m.%Y %H:%M')}\n"
