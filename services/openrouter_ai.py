@@ -14,11 +14,11 @@ import re
 class OpenRouterAI:
     """Сервис для работы с OpenRouter API"""
     
-    def __init__(self):
+    def __init__(self, api_key_consultant: str, api_key_search: str, base_url: str):
         # Используем разные ключи и модели для разных задач
-        self.api_key_consultant = os.getenv("OPENROUTER_API_KEY_CONSULTANT")
-        self.api_key_search = os.getenv("OPENROUTER_API_KEY_SEARCH") 
-        self.base_url = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
+        self.api_key_consultant = api_key_consultant
+        self.api_key_search = api_key_search
+        self.base_url = base_url
         
         # Основная модель (дешевая) для консультирования
         self.model_consultant = os.getenv("OPENROUTER_MODEL_CONSULTANT", "google/gemini-2.0-flash-001")
@@ -28,7 +28,8 @@ class OpenRouterAI:
         self.site_url = os.getenv("SITE_URL", "https://ilpo-taxi.top")
         self.site_name = os.getenv("SITE_NAME", "ILPO-TAXI Smart Taxi")
 
-        print(f"DEBUG: OPENROUTER_API_KEY_CONSULTANT = {os.getenv('OPENROUTER_API_KEY_CONSULTANT')}")
+        # Удаляем отладочный вывод
+        # print(f"DEBUG: OPENROUTER_API_KEY_CONSULTANT = {os.getenv('OPENROUTER_API_KEY_CONSULTANT')}")
 
         if not self.api_key_consultant:
             raise ValueError("OPENROUTER_API_KEY_CONSULTANT не найден в переменных окружения")

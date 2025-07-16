@@ -5,9 +5,8 @@ import os
 from typing import List
 from pydantic_settings import BaseSettings
 from pydantic import field_validator
-from dotenv import load_dotenv
 
-load_dotenv()
+# Удаляем этот load_dotenv(), так как он уже есть в main.py и Systemd
 
 class Settings(BaseSettings):
     """Настройки приложения"""
@@ -17,7 +16,12 @@ class Settings(BaseSettings):
     TELEGRAM_BOT_TOKEN: str = os.getenv("TELEGRAM_BOT_TOKEN", "")
     TELEGRAM_WEBHOOK_URL: str = os.getenv("TELEGRAM_WEBHOOK_URL", "")
     TELEGRAM_WEBHOOK_SECRET: str = os.getenv("TELEGRAM_WEBHOOK_SECRET", "")
-    
+
+    # OpenRouter API
+    OPENROUTER_API_KEY_CONSULTANT: str = os.getenv("OPENROUTER_API_KEY_CONSULTANT", "")
+    OPENROUTER_API_KEY_SEARCH: str = os.getenv("OPENROUTER_API_KEY_SEARCH", "")
+    OPENROUTER_BASE_URL: str = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
+
     # Database
     DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql+asyncpg://user:password@localhost:5432/ilpo_taxi")
     DATABASE_HOST: str = os.getenv("DATABASE_HOST", "localhost")

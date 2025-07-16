@@ -13,8 +13,9 @@ import asyncio
 
 
 # Импорты наших сервисов
-from services.openrouter_ai import openrouter_ai
 from services.chat_manager import chat_manager
+from services.openrouter_ai import OpenRouterAI
+from telegram_bot.config.settings import settings
 
 import logging
 logger = logging.getLogger(__name__)
@@ -22,12 +23,22 @@ logger = logging.getLogger(__name__)
 # Создаем роутер для чата
 chat_router = APIRouter()
 
+# Глобальный экземпляр OpenRouterAI (будет инициализирован при старте)
+openrouter_ai: OpenRouterAI = None
+
 # Инициализация менеджера чата при запуске приложения
 @chat_router.on_event("startup")
 async def startup_event():
     """Инициализация сервисов при запуске"""
     print("🚀 Инициализация чат-сервисов...")
     await chat_manager.initialize()
+    
+    global openrouter_ai
+    openrouter_ai = OpenRouterAI(
+        api_key_consultant=settings.OPENROUTER_API_KEY_CONSULTANT,
+        api_key_search=settings.OPENROUTER_API_KEY_SEARCH,
+        base_url=settings.OPENROUTER_BASE_URL
+    )
     print("✅ Чат-сервисы успешно инициализированы")
 
 # Список активных WebSocket соединений
@@ -364,7 +375,6 @@ async def send_message_to_support(request: Request):
         if not chat_id or not message_text:
             return {"success": False, "error": "chat_id и message обязательные"}
         
-        from telegram_bot.services.manager_service import manager_service
         from telegram_bot.models.database import AsyncSessionLocal
         from telegram_bot.models.support_models import SupportChat, ChatMessage
         from sqlalchemy import select
@@ -471,13 +481,9 @@ async def get_chat_messages(chat_id: str, limit: int = 50):
 # Обработка завершения работы
 @chat_router.on_event("shutdown")
 async def shutdown_event():
-    """Корректное завершение работы сервисов"""
+    """Завершение работы сервисов"""
     print("🔄 Завершение работы чат-сервиса...")
-    
-    # Закрываем менеджер чата
-    await chat_manager.shutdown()
-    
-    # Закрываем OpenRouter AI клиент
-    await openrouter_ai.close()
-    
+    if openrouter_ai:
+        await openrouter_ai.close()
+    await chat_manager.cleanup_sessions() # Убедитесь, что эта функция корректно останавливает задачу
     print("✅ Чат-сервис корректно завершен") 
