@@ -9,9 +9,11 @@ from aiogram.enums import ParseMode
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.filters import Command
 from datetime import datetime
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from telegram_bot.services.manager_service import manager_service
-from telegram_bot.models.support_models import Application, ApplicationStatus
+from telegram_bot.models.support_models import Application, ApplicationStatus, Manager
 from telegram_bot.models.database import AsyncSessionLocal
 from telegram_bot.config.settings import settings
 
@@ -284,9 +286,14 @@ async def callback_application_action(callback: CallbackQuery):
             success = await manager_service.assign_application_to_manager(app_id, telegram_id)
             
             if success:
-                # Получаем обновленную заявку
+                # Получаем обновленную заявку с загруженным менеджером
                 async with AsyncSessionLocal() as session:
-                    application = await session.get(Application, app_id)
+                    result = await session.execute(
+                        select(Application)
+                        .options(selectinload(Application.assigned_manager))
+                        .where(Application.id == app_id)
+                    )
+                    application = result.scalars().first()
                     
                     if application:
                         text = f"✅ **Заявка принята в работу!**\n\n"
@@ -305,7 +312,12 @@ async def callback_application_action(callback: CallbackQuery):
         elif action == "details":
             # Показать детали заявки
             async with AsyncSessionLocal() as session:
-                application = await session.get(Application, app_id)
+                result = await session.execute(
+                    select(Application)
+                    .options(selectinload(Application.assigned_manager))
+                    .where(Application.id == app_id)
+                )
+                application = result.scalars().first()
                 
                 if application:
                     text = format_application_details(application)
@@ -374,9 +386,14 @@ async def callback_application_details(callback: CallbackQuery):
             await callback.answer("❌ Вы не зарегистрированы как менеджер.", parse_mode=ParseMode.HTML)
             return
         
-        # Получаем заявку из базы данных
+        # Получаем заявку из базы данных с предзагрузкой менеджера
         async with AsyncSessionLocal() as session:
-            application = await session.get(Application, app_id)
+            result = await session.execute(
+                select(Application)
+                .options(selectinload(Application.assigned_manager))
+                .where(Application.id == app_id)
+            )
+            application = result.scalars().first()
             
             if not application:
                 await callback.answer("❌ Заявка не найдена.", parse_mode=ParseMode.HTML)
@@ -777,9 +794,9 @@ async def auto_assign_new_applications():
     try:
         async with AsyncSessionLocal() as session:
             # Получаем новые заявки
-            from sqlalchemy import select
             result = await session.execute(
                 select(Application).where(Application.status == ApplicationStatus.NEW)
+                .options(selectinload(Application.assigned_manager))
             )
             new_applications = result.scalars().all()
             
@@ -796,6 +813,9 @@ async def auto_assign_new_applications():
                     
                     if success:
                         logger.info(f"✅ Заявка #{app.id} автоматически назначена менеджеру {available_manager.first_name}")
+                        
+                        # Обновляем объект в памяти, чтобы избежать lazy load ошибки
+                        app.assigned_manager = available_manager
                         
                         # Отправляем уведомление менеджеру
                         await notify_manager_about_new_application(available_manager, app)
