@@ -1122,6 +1122,7 @@ def get_manager_main_keyboard(is_admin: bool = False) -> InlineKeyboardMarkup:
         [InlineKeyboardButton(text="🟢 Начать смену", callback_data="go_online")],
         [InlineKeyboardButton(text="📊 Статистика", callback_data="show_stats")],
         [InlineKeyboardButton(text="📋 Мои заявки", callback_data="my_applications")],
+        [InlineKeyboardButton(text="📋 Все заявки", callback_data="all_applications")],
     ]
     
     if is_admin:
@@ -1133,6 +1134,7 @@ def get_online_keyboard(is_admin: bool = False) -> InlineKeyboardMarkup:
     """Клавиатура для онлайн режима"""
     buttons = [
         [InlineKeyboardButton(text="📋 Новые заявки", callback_data="new_applications")],
+        [InlineKeyboardButton(text="📋 Все заявки", callback_data="all_applications")],
         [InlineKeyboardButton(text="💬 Активные чаты", callback_data="active_chats")],
         [InlineKeyboardButton(text="📊 Статистика", callback_data="show_stats")],
         [InlineKeyboardButton(text="🔴 Завершить смену", callback_data="go_offline")],

@@ -244,6 +244,17 @@ class ManagerService:
             except Exception as e:
                 logger.error(f"❌ Ошибка получения заявок менеджера: {e}")
                 return []
+    
+    async def get_all_applications(self, limit: int = 20) -> List[Application]:
+        """Получить все заявки в системе (для админов и менеджеров)"""
+        async with AsyncSessionLocal() as session:
+            try:
+                query = select(Application).order_by(desc(Application.created_at)).limit(limit)
+                result = await session.execute(query)
+                return result.scalars().all()
+            except Exception as e:
+                logger.error(f"❌ Ошибка получения всех заявок: {e}")
+                return []
 
     async def get_available_new_applications(self, limit: int = 10) -> List[Application]:
         """Получить доступные новые заявки (неназначенные)"""

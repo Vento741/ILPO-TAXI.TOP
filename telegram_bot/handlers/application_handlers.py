@@ -376,6 +376,66 @@ async def callback_application_note(callback: CallbackQuery):
         logger.error(f"❌ Ошибка добавления заметки: {e}")
         await callback.answer("❌ Произошла ошибка.")
 
+@application_router.callback_query(F.data == "all_applications")
+async def callback_all_applications(callback: CallbackQuery):
+    """Показать все заявки в системе"""
+    user = callback.from_user
+    telegram_id = int(user.id)
+    
+    try:
+        manager = await manager_service.get_manager_by_telegram_id(telegram_id)
+        if not manager:
+            await callback.answer("❌ Вы не зарегистрированы как менеджер.")
+            return
+        
+        # Получаем все заявки (без фильтра по статусу и менеджеру)
+        applications = await manager_service.get_all_applications(limit=15)
+        
+        if not applications:
+            await callback.message.edit_text(
+                "📋 **Все заявки системы**\n\n"
+                "В системе нет заявок.",
+                reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                    [InlineKeyboardButton(text="🔄 Обновить", callback_data="all_applications")],
+                    [InlineKeyboardButton(text="◀️ К списку заявок", callback_data="my_applications")]
+                ])
+            )
+            return
+        
+        text = f"📋 **Все заявки системы ({len(applications)})**\n\n"
+        
+        for app in applications[:10]:
+            status_emoji = get_status_emoji(app.status)
+            category_text = get_category_text(app.category)
+            
+            text += f"{status_emoji} **Заявка #{app.id}**\n"
+            text += f"👤 {app.full_name}\n"
+            text += f"📱 {app.phone}\n"
+            text += f"🏙️ {app.city}\n"
+            text += f"🚗 {category_text}\n"
+            
+            # Показываем менеджера, если заявка назначена
+            if app.assigned_manager_id:
+                text += f"👤 Менеджер: Назначен\n"
+            else:
+                text += f"👤 Менеджер: Не назначен\n"
+                
+            text += f"📅 {app.created_at.strftime('%d.%m.%Y %H:%M')}\n\n"
+        
+        if len(applications) > 10:
+            text += f"... и еще {len(applications) - 10} заявок"
+        
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="🔄 Обновить", callback_data="all_applications")],
+            [InlineKeyboardButton(text="📋 Мои заявки", callback_data="my_applications")],
+            [InlineKeyboardButton(text="◀️ Назад", callback_data="back_to_main")]
+        ])
+        
+        await callback.message.edit_text(text, reply_markup=keyboard)
+    except Exception as e:
+        logger.error(f"❌ Ошибка получения всех заявок: {e}")
+        await callback.answer("❌ Произошла ошибка при получении заявок.")
+
 def format_application_details(application: Application) -> str:
     """Форматирование детальной информации о заявке"""
     status_emoji = get_status_emoji(application.status)
@@ -561,6 +621,7 @@ def get_applications_keyboard() -> InlineKeyboardMarkup:
         [InlineKeyboardButton(text="🆕 Новые заявки", callback_data="new_applications")],
         [InlineKeyboardButton(text="⚙️ В работе", callback_data="in_progress_applications")],
         [InlineKeyboardButton(text="✅ Завершенные", callback_data="completed_applications")],
+        [InlineKeyboardButton(text="📋 Все заявки", callback_data="all_applications")],
         [InlineKeyboardButton(text="🔄 Обновить", callback_data="refresh_applications")],
         [InlineKeyboardButton(text="◀️ Главное меню", callback_data="back_to_main")]
     ])
