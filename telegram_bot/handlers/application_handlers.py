@@ -45,7 +45,7 @@ async def cmd_applications(message: Message):
         
         if not applications:
             await message.answer(
-                "📋 **Список заявок пуст**\n\n"
+                "📋 <b>Список заявок пуст</b>\n\n"
                 "У вас пока нет назначенных заявок.",
                 reply_markup=get_applications_empty_keyboard(),
                 parse_mode=ParseMode.HTML
@@ -53,17 +53,17 @@ async def cmd_applications(message: Message):
             return
         
         # Формируем список заявок
-        text = "📋 **Ваши заявки:**\n\n"
+        text = "<b>📋 Ваши заявки:</b>\n\n"
         
         for app in applications:
             status_emoji = get_status_emoji(app.status)
             category_text = get_category_text(app.category)
             
-            text += f"{status_emoji} **Заявка #{app.id}**\n"
-            text += f"👤 {app.full_name}\n"
-            text += f"📱 {app.phone}\n"
-            text += f"🏙️ {app.city}\n"
-            text += f"🚗 {category_text}\n"
+            text += f"{status_emoji} <b>Заявка #{app.id}</b>\n"
+            text += f"👤 {html.escape(app.full_name)}\n"
+            text += f"📱 <code>{html.escape(app.phone)}</code>\n"
+            text += f"🏙️ {html.escape(app.city)}\n"
+            text += f"{category_text}\n"  # Эмодзи уже в category_text
             text += f"📅 {app.created_at.strftime('%d.%m.%Y %H:%M')}\n\n"
         
         # Добавляем метку времени, чтобы сообщение всегда было разным
@@ -133,7 +133,7 @@ async def process_applications_callback(
                 }.get(status, "")
                 
                 await callback.message.edit_text(
-                    f"📋 **{status_text} заявки**\n\n"
+                    f"📋 <b>{status_text} заявки</b>\n\n"
                     "У вас пока нет заявок в этой категории.",
                     reply_markup=get_applications_empty_keyboard(),
                     parse_mode=ParseMode.HTML
@@ -146,27 +146,25 @@ async def process_applications_callback(
             return
         
         # Формируем список заявок
-        status_text = "Ваши" if status is None else {
+        status_text_map = {
             ApplicationStatus.NEW: "Новые",
             ApplicationStatus.ASSIGNED: "Назначенные",
             ApplicationStatus.IN_PROGRESS: "В работе",
             ApplicationStatus.COMPLETED: "Завершенные"
-        }.get(status, "")
+        }
+        status_header = "Все" if show_all else status_text_map.get(status, "Ваши")
         
-        if show_all:
-            status_text = "Все"
-        
-        text = f"📋 **{status_text} заявки (стр. {page}/{total_pages}):**\n\n"
+        text = f"<b>📋 {status_header} заявки (стр. {page}/{total_pages}):</b>\n\n"
         
         for app in applications:
             status_emoji = get_status_emoji(app.status)
             category_text = get_category_text(app.category)
             
-            text += f"{status_emoji} **Заявка #{app.id}**\n"
-            text += f"👤 {app.full_name}\n"
-            text += f"📱 {app.phone}\n"
-            text += f"🏙️ {app.city}\n"
-            text += f"🚗 {category_text}\n"
+            text += f"{status_emoji} <b>Заявка #{app.id}</b>\n"
+            text += f"👤 {html.escape(app.full_name)}\n"
+            text += f"📱 <code>{html.escape(app.phone)}</code>\n"
+            text += f"🏙️ {html.escape(app.city)}\n"
+            text += f"{category_text}\n" # Эмодзи уже в category_text
             text += f"📅 {app.created_at.strftime('%d.%m.%Y %H:%M')}\n\n"
         
         # Добавляем метку времени, чтобы сообщение всегда было разным
@@ -296,7 +294,7 @@ async def callback_application_action(callback: CallbackQuery):
                     application = result.scalars().first()
                     
                     if application:
-                        text = f"✅ **Заявка принята в работу!**\n\n"
+                        text = f"✅ <b>Заявка принята в работу!</b>\n\n"
                         text += format_application_details(application)
                         
                         keyboard = get_taken_application_keyboard(app_id)
@@ -336,7 +334,7 @@ async def callback_application_action(callback: CallbackQuery):
                     application.processed_at = datetime.utcnow()
                     await session.commit()
                     
-                    text = f"✅ **Заявка #{app_id} завершена!**\n\n"
+                    text = f"✅ <b>Заявка #{app_id} завершена!</b>\n\n"
                     text += "Спасибо за работу! 👍"
                     
                     await callback.message.edit_text(text, reply_markup=get_completed_application_keyboard(), parse_mode=ParseMode.HTML)
@@ -351,11 +349,11 @@ async def callback_application_action(callback: CallbackQuery):
                 
                 if application:
                     contact_text = f"""
-📞 **Контакты клиента:**
+📞 <b>Контакты клиента:</b>
 
-👤 **Имя:** {application.full_name}
-📱 **Телефон:** {application.phone}
-🏙️ **Город:** {application.city}
+👤 <b>Имя:</b> {application.full_name}
+📱 <b>Телефон:</b> {application.phone}
+🏙️ <b>Город:</b> {application.city}
 
 Вы можете позвонить клиенту или написать в WhatsApp/Telegram.
                     """
@@ -498,16 +496,16 @@ async def callback_applications_menu(callback: CallbackQuery):
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="📋 Мои заявки", callback_data="my_applications")],
         [InlineKeyboardButton(text="📋 Новые заявки", callback_data="new_applications")],
-        [InlineKeyboardButton(text="📋 Назначенные заявки", callback_data="assigned_applications")],
+        [InlineKeyboardButton(text="📋 Назначенные", callback_data="assigned_applications")],
         [InlineKeyboardButton(text="⚙️ В работе", callback_data="in_progress_applications")],
         [InlineKeyboardButton(text="✅ Завершенные", callback_data="completed_applications")],
-        [InlineKeyboardButton(text="📋 Все заявки", callback_data="all_applications")],
+        [InlineKeyboardButton(text="🗂️ Все заявки", callback_data="all_applications")],
         [InlineKeyboardButton(text="◀️ Назад", callback_data="back_to_main")]
     ])
     
     try:
         await callback.message.edit_text(
-            "📋 **Управление заявками**\n\n"
+            "<b>📋 Управление заявками</b>\n\n"
             "Выберите категорию заявок для просмотра:",
             reply_markup=keyboard,
             parse_mode=ParseMode.HTML
@@ -860,7 +858,7 @@ async def notify_manager_about_new_application(manager, application: Application
         bot = Bot(token=settings.TELEGRAM_BOT_TOKEN)
         
         text = f"""
-🔔 **Новая заявка назначена вам!**
+🔔 <b>Новая заявка назначена вам!</b>
 
 {format_application_details(application)}
 
