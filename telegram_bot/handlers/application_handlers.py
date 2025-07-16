@@ -396,7 +396,10 @@ def format_application_details(application: Application) -> str:
     text += f"• Имя: {application.full_name}\n"
     text += f"• Телефон: {application.phone}\n"
     text += f"• Возраст: {application.age if application.age else 'Не указан'} лет\n"
-    text += f"• Город: {application.city}\n\n"
+    text += f"• Город: {application.city}\n"
+    if application.email:
+        text += f"• Email: {application.email}\n"
+    text += "\n"
     
     # Профессиональная информация
     text += f"🚗 **Профессиональная информация:**\n"
@@ -429,20 +432,109 @@ def format_application_details(application: Application) -> str:
         text += f"👤 **Менеджер:** Не назначен\n"
     
     if application.processed_at:
-        text += f"⚡ **Обработана:** {application.processed_at.strftime('%d.%m.%Y %H:%M')}\n"
+        text += f"⚡️ **Обработана:** {application.processed_at.strftime('%d.%m.%Y %H:%M')}\n"
     
-    # Дополнительная информация
-    if application.additional_info:
-        text += f"\n📝 **Дополнительная информация:**\n"
+    # Дополнительная информация из новых полей
+    text += f"\n📝 **Дополнительная информация:**\n"
+    
+    # Гражданство
+    if application.citizenship:
+        citizenship_map = {
+            "rf": "Гражданин РФ",
+            "eaeu": "Гражданин ЕАЭС",
+            "other": "Другое гражданство"
+        }
+        text += f"• Гражданство: {citizenship_map.get(application.citizenship, application.citizenship)}\n"
+    
+    # Статус работы
+    if application.work_status:
+        text += f"• Статус работы: {application.work_status}\n"
+    
+    # Водительские права
+    if application.has_driver_license:
+        text += f"• Водительские права: {application.has_driver_license}\n"
+    
+    # Автомобиль
+    if application.has_car:
+        text += f"• Автомобиль: {application.has_car}\n"
+    
+    # Марка и модель
+    if application.car_brand and application.car_model:
+        car_year = f" ({application.car_year} г.)" if application.car_year else ""
+        text += f"• Автомобиль: {application.car_brand} {application.car_model}{car_year}\n"
+    
+    # Класс автомобиля
+    if application.car_class:
+        text += f"• Желаемый класс: {application.car_class}\n"
+    
+    # Разрешение такси
+    if application.has_taxi_permit:
+        text += f"• Разрешение такси: {application.has_taxi_permit}\n"
+    
+    # Опыт работы
+    if application.work_experience:
+        text += f"• Опыт работы: {application.work_experience}\n"
+    
+    # Предыдущие платформы
+    if application.previous_platforms:
+        text += f"• Работал в: {application.previous_platforms}\n"
+    
+    # Медсправка
+    if application.has_medical_cert:
+        text += f"• Медсправка: {application.has_medical_cert}\n"
+    
+    # Доступные документы
+    if application.available_documents:
+        if isinstance(application.available_documents, list):
+            text += f"• Документы: {', '.join(application.available_documents)}\n"
+        elif isinstance(application.available_documents, dict):
+            text += f"• Документы: {', '.join(application.available_documents.values())}\n"
+    
+    # Курьерская информация
+    if application.category in ['courier', 'both']:
+        if application.delivery_types:
+            if isinstance(application.delivery_types, list):
+                text += f"• Категории доставки: {', '.join(application.delivery_types)}\n"
+            elif isinstance(application.delivery_types, dict):
+                text += f"• Категории доставки: {', '.join(application.delivery_types.values())}\n"
         
-        # Разбиваем длинную дополнительную информацию на части для удобства чтения
+        if application.has_thermo_bag:
+            text += f"• Термосумка: {application.has_thermo_bag}\n"
+    
+    # Грузовые перевозки
+    if application.category == 'cargo':
+        if application.truck_type:
+            text += f"• Тип кузова: {application.truck_type}\n"
+        if application.cargo_license:
+            text += f"• Права: {application.cargo_license}\n"
+    
+    # График работы
+    if application.work_schedule:
+        text += f"• График работы: {application.work_schedule}\n"
+    
+    # Удобное время
+    if application.preferred_time:
+        text += f"• Удобное время: {application.preferred_time}\n"
+    
+    # Комментарии
+    if application.comments:
+        text += f"• Комментарии: {application.comments}\n"
+    
+    # Согласия
+    if application.has_documents_confirmed:
+        text += f"• Подтверждение документов: Да\n"
+    if application.agree_terms:
+        text += f"• Согласие с условиями: Да\n"
+    if application.agree_marketing:
+        text += f"• Согласие на рассылку: Да\n"
+    
+    # Старое поле дополнительной информации (для совместимости)
+    if application.additional_info:
+        # Показываем всю дополнительную информацию без ограничений
         info_lines = application.additional_info.split('\n')
-        for line in info_lines[:10]:  # Показываем первые 10 строк
+        for line in info_lines:
             if line.strip():
                 text += f"• {line.strip()}\n"
-        
-        if len(info_lines) > 10:
-            text += f"• ... и еще {len(info_lines) - 10} пунктов\n"
     
     if application.notes:
         text += f"\n📝 **Заметки менеджера:**\n{application.notes}\n"
