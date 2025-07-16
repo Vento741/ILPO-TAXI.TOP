@@ -608,6 +608,10 @@ class ApplicationService:
                 
                 text += f"\n\n⚡ <b>ДЕЙСТВИЯ:</b>"
                 
+                phone_number_clean = ''.join(filter(str.isdigit, application.phone))
+                if len(phone_number_clean) == 11 and phone_number_clean.startswith('8'):
+                    phone_number_clean = '7' + phone_number_clean[1:]
+
                 keyboard = InlineKeyboardMarkup(inline_keyboard=[
                     [
                         InlineKeyboardButton(text="✅ Взять в работу", callback_data=f"app_take_{application.id}"),
