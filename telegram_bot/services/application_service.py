@@ -31,7 +31,7 @@ class ApplicationService:
                 logger.info(f"📝 Создание заявки из данных: {application_data}")
                 
                 # Проверяем обязательные поля
-                full_name = application_data.get("fullName", "")
+                full_name = application_data.get("full_name", "")
                 phone = application_data.get("phone", "")
                 age = application_data.get("age")
                 city = application_data.get("city", "")
