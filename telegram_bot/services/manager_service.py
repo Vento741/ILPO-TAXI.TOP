@@ -230,11 +230,16 @@ class ManagerService:
                         Application.assigned_manager_id.is_(None)
                     )
                 else:
-                    # Для остальных статусов - только назначенные этому менеджеру
-                    query = select(Application).where(Application.assigned_manager_id == manager.id)
-                    
-                    if status:
-                        query = query.where(Application.status == status)
+                    # Для администраторов показываем все заявки, включая назначенные другим менеджерам
+                    if manager.is_admin:
+                        query = select(Application)
+                        if status:
+                            query = query.where(Application.status == status)
+                    else:
+                        # Для обычных менеджеров - только назначенные им заявки
+                        query = select(Application).where(Application.assigned_manager_id == manager.id)
+                        if status:
+                            query = query.where(Application.status == status)
                 
                 query = query.order_by(desc(Application.created_at)).limit(limit)
                 
