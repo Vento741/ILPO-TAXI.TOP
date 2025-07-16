@@ -261,9 +261,11 @@ async def callback_completed_applications(callback: CallbackQuery):
 
 @application_router.callback_query(F.data.startswith("app_"))
 async def callback_application_action(callback: CallbackQuery):
-    """Обработка действий с заявкой"""
-    action = callback.data.split("_")[1]
-    app_id = int(callback.data.split("_")[2])
+    """Обработка действий с заявками"""
+    data = callback.data.split("_")
+    action = data[1]
+    app_id = int(data[2])
+    
     user = callback.from_user
     telegram_id = int(user.id)
     
@@ -273,75 +275,83 @@ async def callback_application_action(callback: CallbackQuery):
             await callback.answer("❌ Вы не зарегистрированы как менеджер.")
             return
         
-        # Получаем заявку из базы данных
-        async with AsyncSessionLocal() as session:
-            application = await session.get(Application, app_id)
+        if action == "take":
+            # Взять заявку в работу
+            success = await manager_service.assign_application_to_manager(app_id, telegram_id)
             
-            if not application:
-                await callback.answer("❌ Заявка не найдена.")
-                return
-            
-            if action == "take":
-                # Взять заявку в работу
-                success = await manager_service.assign_application_to_manager(app_id, telegram_id)
-                
-                if success:
-                    await callback.answer("✅ Заявка взята в работу!")
+            if success:
+                # Получаем обновленную заявку
+                async with AsyncSessionLocal() as session:
+                    application = await session.get(Application, app_id)
                     
-                    # Обновляем детали заявки
-                    await session.refresh(application)
+                    if application:
+                        text = f"✅ **Заявка принята в работу!**\n\n"
+                        text += format_application_details(application)
+                        
+                        keyboard = get_taken_application_keyboard(app_id)
+                        await callback.message.edit_text(text, reply_markup=keyboard)
+                        
+                        # Отправляем уведомление клиенту (если есть контакты)
+                        await notify_client_about_assignment(application, manager)
+                    else:
+                        await callback.answer("❌ Заявка не найдена.")
+            else:
+                await callback.answer("❌ Не удалось взять заявку. Возможно, её уже взял другой менеджер.")
+        
+        elif action == "details":
+            # Показать детали заявки
+            async with AsyncSessionLocal() as session:
+                application = await session.get(Application, app_id)
+                
+                if application:
                     text = format_application_details(application)
-                    
-                    # Показываем клавиатуру для взятой заявки
-                    keyboard = get_taken_application_keyboard(app_id)
-                    
+                    keyboard = get_application_detail_keyboard(app_id, False)
                     await callback.message.edit_text(text, reply_markup=keyboard)
-                    
-                    # Уведомляем клиента
-                    await notify_client_about_assignment(application, manager)
                 else:
-                    await callback.answer("❌ Не удалось взять заявку в работу.")
-            
-            elif action == "complete":
-                # Завершить заявку
-                success = await manager_service.complete_application(app_id, telegram_id)
+                    await callback.answer("❌ Заявка не найдена.")
+        
+        elif action == "complete":
+            # Завершить заявку
+            async with AsyncSessionLocal() as session:
+                application = await session.get(Application, app_id)
                 
-                if success:
-                    await callback.answer("✅ Заявка успешно завершена!")
+                if application and application.assigned_manager_id == manager.id:
+                    application.status = ApplicationStatus.COMPLETED
+                    application.processed_at = datetime.utcnow()
+                    await session.commit()
                     
-                    # Показываем клавиатуру для завершенной заявки
-                    keyboard = get_completed_application_keyboard()
+                    text = f"✅ **Заявка #{app_id} завершена!**\n\n"
+                    text += "Спасибо за работу! 👍"
                     
-                    await callback.message.edit_text(
-                        "✅ **Заявка успешно завершена!**\n\n"
-                        f"Заявка #{app_id} от {application.full_name} отмечена как завершенная.\n\n"
-                        "Выберите следующее действие:",
-                        reply_markup=keyboard
-                    )
+                    await callback.message.edit_text(text, reply_markup=get_completed_application_keyboard())
+                    await callback.answer("✅ Заявка завершена!")
                 else:
-                    await callback.answer("❌ Не удалось завершить заявку.")
-            
-            elif action == "contact":
-                # Показать контакты клиента
-                phone = application.phone
-                full_name = application.full_name
+                    await callback.answer("❌ Заявка не найдена или не назначена вам.")
+        
+        elif action == "contact":
+            # Связаться с клиентом
+            async with AsyncSessionLocal() as session:
+                application = await session.get(Application, app_id)
                 
-                # Создаем текст с контактами
-                contact_text = f"📞 **Контакты клиента**\n\n"
-                contact_text += f"👤 **{full_name}**\n"
-                contact_text += f"📱 **Телефон:** {phone}\n"
-                
-                if application.email:
-                    contact_text += f"✉️ **Email:** {application.email}\n"
-                
-                # Создаем клавиатуру с кнопками для связи
-                keyboard = get_client_contact_keyboard(application)
-                
-                try:
+                if application:
+                    contact_text = f"""
+📞 **Контакты клиента:**
+
+👤 **Имя:** {application.full_name}
+📱 **Телефон:** {application.phone}
+🏙️ **Город:** {application.city}
+
+Вы можете позвонить клиенту или написать в WhatsApp/Telegram.
+                    """
+                    
+                    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+                        [InlineKeyboardButton(text=f"📞 {application.phone}", callback_data=f"phone_{application.id}")],
+                        [InlineKeyboardButton(text="◀️ Назад к заявке", callback_data=f"app_details_{app_id}")]
+                    ])
+                    
                     await callback.message.edit_text(contact_text, reply_markup=keyboard)
-                except Exception as e:
-                    logger.error(f"❌ Ошибка отображения контактов: {e}")
-                    await callback.answer("❌ Произошла ошибка при отображении контактов.")
+                else:
+                    await callback.answer("❌ Заявка не найдена.")
     
     except Exception as e:
         logger.error(f"❌ Ошибка обработки действия с заявкой: {e}")
@@ -598,45 +608,17 @@ def format_application_details(application: Application) -> str:
     # Доступные документы
     if application.available_documents:
         if isinstance(application.available_documents, list):
-            # Ограничиваем длину каждого элемента списка
-            safe_docs = []
-            for doc in application.available_documents:
-                if len(doc) > 50:  # Ограничиваем длину каждого элемента
-                    safe_docs.append(doc[:50] + "...")
-                else:
-                    safe_docs.append(doc)
-            text += f"• Документы: {', '.join(safe_docs)}\n"
+            text += f"• Документы: {', '.join(application.available_documents)}\n"
         elif isinstance(application.available_documents, dict):
-            # Ограничиваем длину каждого значения в словаре
-            safe_docs = []
-            for key, value in application.available_documents.items():
-                if isinstance(value, str) and len(value) > 50:
-                    safe_docs.append(value[:50] + "...")
-                else:
-                    safe_docs.append(str(value))
-            text += f"• Документы: {', '.join(safe_docs)}\n"
+            text += f"• Документы: {', '.join(application.available_documents.values())}\n"
     
     # Курьерская информация
     if application.category in ['courier', 'both']:
         if application.delivery_types:
             if isinstance(application.delivery_types, list):
-                # Ограничиваем длину списка типов доставки
-                safe_types = []
-                for dt in application.delivery_types:
-                    if len(dt) > 50:
-                        safe_types.append(dt[:50] + "...")
-                    else:
-                        safe_types.append(dt)
-                text += f"• Категории доставки: {', '.join(safe_types)}\n"
+                text += f"• Категории доставки: {', '.join(application.delivery_types)}\n"
             elif isinstance(application.delivery_types, dict):
-                # Ограничиваем длину значений в словаре типов доставки
-                safe_types = []
-                for key, value in application.delivery_types.items():
-                    if isinstance(value, str) and len(value) > 50:
-                        safe_types.append(value[:50] + "...")
-                    else:
-                        safe_types.append(str(value))
-                text += f"• Категории доставки: {', '.join(safe_types)}\n"
+                text += f"• Категории доставки: {', '.join(application.delivery_types.values())}\n"
         
         if application.has_thermo_bag:
             text += f"• Термосумка: {application.has_thermo_bag}\n"
@@ -656,13 +638,9 @@ def format_application_details(application: Application) -> str:
     if application.preferred_time:
         text += f"• Удобное время: {application.preferred_time}\n"
     
-    # Комментарии - ограничиваем длину
+    # Комментарии
     if application.comments:
-        if len(application.comments) > 500:  # Ограничиваем длину комментариев
-            comments = application.comments[:500] + "..."
-        else:
-            comments = application.comments
-        text += f"• Комментарии: {comments}\n"
+        text += f"• Комментарии: {application.comments}\n"
     
     # Согласия
     if application.has_documents_confirmed:
@@ -674,33 +652,14 @@ def format_application_details(application: Application) -> str:
     
     # Старое поле дополнительной информации (для совместимости)
     if application.additional_info:
-        # Ограничиваем длину дополнительной информации
-        if len(application.additional_info) > 500:
-            info_text = application.additional_info[:500] + "..."
-        else:
-            info_text = application.additional_info
-            
-        # Показываем только первые несколько строк, если их много
-        info_lines = info_text.split('\n')
-        if len(info_lines) > 10:
-            info_lines = info_lines[:10]
-            info_lines.append("...")
-        
+        # Показываем всю дополнительную информацию без ограничений
+        info_lines = application.additional_info.split('\n')
         for line in info_lines:
             if line.strip():
                 text += f"• {line.strip()}\n"
     
-    # Заметки менеджера - ограничиваем длину
     if application.notes:
-        if len(application.notes) > 500:
-            notes = application.notes[:500] + "..."
-        else:
-            notes = application.notes
-        text += f"\n📝 **Заметки менеджера:**\n{notes}\n"
-    
-    # Проверяем общую длину сообщения и обрезаем при необходимости
-    if len(text) > 4000:  # Максимальная длина сообщения в Telegram
-        text = text[:3950] + "...\n\n[Сообщение было сокращено из-за ограничений Telegram]"
+        text += f"\n📝 **Заметки менеджера:**\n{application.notes}\n"
     
     return text
 
@@ -929,36 +888,3 @@ async def callback_next_application(callback: CallbackQuery):
     except Exception as e:
         logger.error(f"❌ Ошибка получения следующей заявки: {e}")
         await callback.answer("❌ Произошла ошибка.") 
-
-def get_client_contact_keyboard(application: Application) -> InlineKeyboardMarkup:
-    """Клавиатура для контактов клиента"""
-    phone = application.phone.replace("+", "").replace(" ", "").replace("-", "").replace("(", "").replace(")", "")
-    
-    keyboard_buttons = []
-    
-    # Кнопка для звонка
-    keyboard_buttons.append([
-        InlineKeyboardButton(text="📞 Позвонить", url=f"tel:{phone}")
-    ])
-    
-    # Кнопка для Telegram (если номер телефона используется в Telegram)
-    keyboard_buttons.append([
-        InlineKeyboardButton(text="📱 Написать в Telegram", url=f"https://t.me/+{phone}")
-    ])
-    
-    # Кнопка для WhatsApp
-    keyboard_buttons.append([
-        InlineKeyboardButton(text="📱 Написать в WhatsApp", url=f"https://wa.me/{phone}")
-    ])
-    
-    # Кнопка для SMS
-    keyboard_buttons.append([
-        InlineKeyboardButton(text="✉️ Отправить SMS", url=f"sms:{phone}")
-    ])
-    
-    # Кнопка возврата к заявке
-    keyboard_buttons.append([
-        InlineKeyboardButton(text="◀️ Назад к заявке", callback_data=f"app_details_{application.id}")
-    ])
-    
-    return InlineKeyboardMarkup(inline_keyboard=keyboard_buttons) 
