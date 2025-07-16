@@ -263,72 +263,6 @@ async def callback_completed_applications(callback: CallbackQuery):
     """Показать завершенные заявки"""
     await process_applications_callback(callback, status=ApplicationStatus.COMPLETED)
 
-@application_router.callback_query(F.data.startswith("app_"))
-async def callback_application_action(callback: CallbackQuery):
-    """Обработка действий с заявками"""
-    data = callback.data.split("_")
-    action = data[1]
-    app_id = int(data[2])
-    
-    user = callback.from_user
-    telegram_id = int(user.id)
-    
-    try:
-        manager = await manager_service.get_manager_by_telegram_id(telegram_id)
-        if not manager:
-            await callback.answer("❌ Вы не зарегистрированы как менеджер.", show_alert=True)
-            return
-        
-        if action == "take":
-            # Взять заявку в работу
-            success = await manager_service.assign_application_to_manager(app_id, telegram_id)
-            
-            if success:
-                # Получаем обновленную заявку с загруженным менеджером
-                async with AsyncSessionLocal() as session:
-                    result = await session.execute(
-                        select(Application)
-                        .options(selectinload(Application.assigned_manager))
-                        .where(Application.id == app_id)
-                    )
-                    application = result.scalars().first()
-                    
-                    if application:
-                        text = f"✅ <b>Заявка принята в работу!</b>\n\n"
-                        text += format_application_details(application)
-                        
-                        keyboard = get_taken_application_keyboard(app_id)
-                        await callback.message.edit_text(text, reply_markup=keyboard, parse_mode=ParseMode.HTML)
-                        
-                        # Отправляем уведомление клиенту (если есть контакты)
-                        await notify_client_about_assignment(application, manager)
-                    else:
-                        await callback.answer("❌ Заявка не найдена.", show_alert=True)
-            else:
-                await callback.answer("❌ Не удалось взять заявку. Возможно, её уже взял другой менеджер.", show_alert=True)
-        
-        elif action == "complete":
-            # Завершить заявку
-            async with AsyncSessionLocal() as session:
-                application = await session.get(Application, app_id)
-                
-                if application and application.assigned_manager_id == manager.id:
-                    application.status = ApplicationStatus.COMPLETED
-                    application.processed_at = datetime.utcnow()
-                    await session.commit()
-                    
-                    text = f"✅ <b>Заявка #{app_id} завершена!</b>\n\n"
-                    text += "Спасибо за работу! 👍"
-                    
-                    await callback.message.edit_text(text, reply_markup=get_completed_application_keyboard(), parse_mode=ParseMode.HTML)
-                    await callback.answer("✅ Заявка завершена!")
-                else:
-                    await callback.answer("❌ Заявка не найдена или не назначена вам.", show_alert=True)
-    
-    except Exception as e:
-        logger.error(f"❌ Ошибка обработки действия с заявкой: {e}")
-        await callback.answer("❌ Произошла ошибка.", show_alert=True)
-
 @application_router.callback_query(F.data.startswith("app_details_"))
 async def callback_application_details(callback: CallbackQuery):
     """Показать детали заявки по ID"""
@@ -445,6 +379,100 @@ async def callback_application_contact(callback: CallbackQuery):
         logger.error(f"❌ Ошибка при отображении контактов: {e}")
         await callback.answer("❌ Произошла ошибка.", show_alert=True)
 
+# Обработчик для добавления заметок к заявкам
+@application_router.callback_query(F.data.startswith("app_note_"))
+async def callback_application_note(callback: CallbackQuery):
+    """Добавить заметку к заявке"""
+    app_id = int(callback.data.split("_")[2])
+    user = callback.from_user
+    telegram_id = int(user.id)
+    
+    try:
+        manager = await manager_service.get_manager_by_telegram_id(telegram_id)
+        if not manager:
+            await callback.answer("❌ Вы не зарегистрированы как менеджер.", show_alert=True)
+            return
+        
+        # Здесь можно реализовать FSM для ввода заметки
+        # Пока просто показываем информацию
+        await callback.message.edit_text(
+            f"📝 <b>Добавление заметки к заявке #{app_id}</b>\n\n"
+            f"Функция добавления заметок находится в разработке.\n"
+            f"Используйте команды для работы с заявкой.",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="◀️ Назад к заявке", callback_data=f"app_details_{app_id}")]
+            ]),
+            parse_mode=ParseMode.HTML
+        )
+    except Exception as e:
+        logger.error(f"❌ Ошибка добавления заметки: {e}")
+        await callback.answer("❌ Произошла ошибка.", show_alert=True)
+
+@application_router.callback_query(F.data.startswith("app_"))
+async def callback_application_action(callback: CallbackQuery):
+    """Обработка действий с заявками"""
+    data = callback.data.split("_")
+    action = data[1]
+    app_id = int(data[2])
+    
+    user = callback.from_user
+    telegram_id = int(user.id)
+    
+    try:
+        manager = await manager_service.get_manager_by_telegram_id(telegram_id)
+        if not manager:
+            await callback.answer("❌ Вы не зарегистрированы как менеджер.", show_alert=True)
+            return
+        
+        if action == "take":
+            # Взять заявку в работу
+            success = await manager_service.assign_application_to_manager(app_id, telegram_id)
+            
+            if success:
+                # Получаем обновленную заявку с загруженным менеджером
+                async with AsyncSessionLocal() as session:
+                    result = await session.execute(
+                        select(Application)
+                        .options(selectinload(Application.assigned_manager))
+                        .where(Application.id == app_id)
+                    )
+                    application = result.scalars().first()
+                    
+                    if application:
+                        text = f"✅ <b>Заявка принята в работу!</b>\n\n"
+                        text += format_application_details(application)
+                        
+                        keyboard = get_taken_application_keyboard(app_id)
+                        await callback.message.edit_text(text, reply_markup=keyboard, parse_mode=ParseMode.HTML)
+                        
+                        # Отправляем уведомление клиенту (если есть контакты)
+                        await notify_client_about_assignment(application, manager)
+                    else:
+                        await callback.answer("❌ Заявка не найдена.", show_alert=True)
+            else:
+                await callback.answer("❌ Не удалось взять заявку. Возможно, её уже взял другой менеджер.", show_alert=True)
+        
+        elif action == "complete":
+            # Завершить заявку
+            async with AsyncSessionLocal() as session:
+                application = await session.get(Application, app_id)
+                
+                if application and application.assigned_manager_id == manager.id:
+                    application.status = ApplicationStatus.COMPLETED
+                    application.processed_at = datetime.utcnow()
+                    await session.commit()
+                    
+                    text = f"✅ <b>Заявка #{app_id} завершена!</b>\n\n"
+                    text += "Спасибо за работу! 👍"
+                    
+                    await callback.message.edit_text(text, reply_markup=get_completed_application_keyboard(), parse_mode=ParseMode.HTML)
+                    await callback.answer("✅ Заявка завершена!")
+                else:
+                    await callback.answer("❌ Заявка не найдена или не назначена вам.", show_alert=True)
+    
+    except Exception as e:
+        logger.error(f"❌ Ошибка обработки действия с заявкой: {e}")
+        await callback.answer("❌ Произошла ошибка.", show_alert=True)
 
 @application_router.callback_query(F.data == "all_applications")
 async def callback_all_applications(callback: CallbackQuery):
@@ -854,35 +882,6 @@ async def notify_manager_about_new_application(manager, application: Application
         
     except Exception as e:
         logger.error(f"❌ Ошибка уведомления менеджера: {e}") 
-
-# Обработчик для добавления заметок к заявкам
-@application_router.callback_query(F.data.startswith("app_note_"))
-async def callback_application_note(callback: CallbackQuery):
-    """Добавить заметку к заявке"""
-    app_id = int(callback.data.split("_")[2])
-    user = callback.from_user
-    telegram_id = int(user.id)
-    
-    try:
-        manager = await manager_service.get_manager_by_telegram_id(telegram_id)
-        if not manager:
-            await callback.answer("❌ Вы не зарегистрированы как менеджер.", parse_mode=ParseMode.HTML)
-            return
-        
-        # Здесь можно реализовать FSM для ввода заметки
-        # Пока просто показываем информацию
-        await callback.message.edit_text(
-            f"📝 <b>Добавление заметки к заявке #{app_id}</b>\n\n"
-            f"Функция добавления заметок находится в разработке.\n"
-            f"Используйте команды для работы с заявкой.",
-            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text="◀️ Назад к заявке", callback_data=f"app_details_{app_id}")]
-            ]),
-            parse_mode=ParseMode.HTML
-        )
-    except Exception as e:
-        logger.error(f"❌ Ошибка добавления заметки: {e}")
-        await callback.answer("❌ Произошла ошибка.", show_alert=True)
 
 @application_router.callback_query(F.data == "next_application")
 async def callback_next_application(callback: CallbackQuery):
