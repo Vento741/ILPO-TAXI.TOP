@@ -685,7 +685,8 @@ class ManagerService:
 **Используйте кнопки ниже для работы с чатом:**
             """
             
-            keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            # Создаем клавиатуру без кнопки "Позвонить" так как Telegram не поддерживает tel: схему
+            keyboard_buttons = [
                 [
                     InlineKeyboardButton(
                         text="✅ Принять чат", 
@@ -695,20 +696,18 @@ class ManagerService:
                         text="📋 Подробности", 
                         callback_data=f"chat_details_{chat_data['id']}"
                     )
-                ],
-                [
-                    InlineKeyboardButton(
-                        text="📞 Позвонить", 
-                        url=f"tel:{chat_data.get('client_phone')}" if chat_data.get('client_phone') else "https://ilpo-taxi.top"
-                    )
-                ],
-                [
-                    InlineKeyboardButton(
-                        text="💬 Активные чаты", 
-                        callback_data="active_chats"
-                    )
                 ]
+            ]
+            
+            # Добавляем кнопку "Активные чаты"
+            keyboard_buttons.append([
+                InlineKeyboardButton(
+                    text="💬 Активные чаты", 
+                    callback_data="active_chats"
+                )
             ])
+            
+            keyboard = InlineKeyboardMarkup(inline_keyboard=keyboard_buttons)
             
             await bot.send_message(
                 chat_id=manager_telegram_id,

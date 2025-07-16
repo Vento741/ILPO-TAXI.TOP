@@ -445,13 +445,14 @@ async def check_if_transferred_to_manager(session_id: str):
         
         async with AsyncSessionLocal() as session:
             # Ищем активный чат поддержки с указанным web_session_id
+            from sqlalchemy import text
             result = await session.execute(
                 select(SupportChat)
                 .options(selectinload(SupportChat.manager))
                 .where(
-                    SupportChat.chat_metadata['web_session_id'].astext == session_id,
+                    text("chat_metadata ->> 'web_session_id' = :session_id"),
                     SupportChat.is_active == True
-                )
+                ).params(session_id=session_id)
             )
             support_chat = result.scalar_one_or_none()
             return support_chat
