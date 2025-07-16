@@ -84,4 +84,4 @@ TELEGRAM_BOT_FIX.md
 TELEGRAM_BOT_LOGIC.md
 cursor-memory-bank-main/
 # Documentation files
-*.md
+/docs/
