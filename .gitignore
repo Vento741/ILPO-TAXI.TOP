@@ -75,3 +75,12 @@ env-ilpotaxi/
 # VS Code
 .vscode/
 *.log
+docs/
+DEPLOYMENT.md
+DEPLOYMENT_CHECKLIST.md
+SINGUP_TELEGRAM_INTEGRATION_REPORT.md
+start.md
+TELEGRAM_BOT_CALLBACK_FIX_REPORT.md
+TELEGRAM_BOT_FIX.md
+TELEGRAM_BOT_LOGIC.md
+cursor-memory-bank-main/
