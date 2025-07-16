@@ -3,6 +3,7 @@
 """
 import logging
 import html
+from datetime import timezone
 from typing import List, Optional
 from aiogram import Router, F
 from aiogram.enums import ParseMode
@@ -448,7 +449,7 @@ async def callback_application_action(callback: CallbackQuery):
                 
                 if application and application.assigned_manager_id == manager.id:
                     application.status = ApplicationStatus.COMPLETED
-                    application.processed_at = datetime.utcnow()
+                    application.completed_at = datetime.now(timezone.utc)
                     await session.commit()
                     
                     text = f"✅ <b>Заявка #{app_id} завершена!</b>\n\n"
@@ -747,8 +748,10 @@ def format_application_details(application: Application) -> str:
     text += f"\n- - - - - - - - - - - - - - - - - -\n"
     text += f"<b>Статус:</b> {status_map.get(application.status.value, h(application.status.value.upper()))}\n"
     text += f"<b>Подана:</b> {application.created_at.strftime('%d.%m.%Y %H:%M')}\n"
-    if application.processed_at:
-        text += f"<b>Обработана:</b> {application.processed_at.strftime('%d.%m.%Y %H:%M')}\n"
+    if application.assigned_at:
+        text += f"<b>Назначена:</b> {application.assigned_at.strftime('%d.%m.%Y %H:%M')}\n"
+    if application.completed_at:
+        text += f"<b>Завершена:</b> {application.completed_at.strftime('%d.%m.%Y %H:%M')}\n"
     
     if application.assigned_manager:
         text += f"<b>Менеджер:</b> {h(application.assigned_manager.first_name)} {h(application.assigned_manager.last_name or '')}\n"

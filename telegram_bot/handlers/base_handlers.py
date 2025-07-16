@@ -7,7 +7,7 @@ from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKe
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 
 from telegram_bot.services.manager_service import manager_service
 from telegram_bot.services.redis_service import redis_service
@@ -210,6 +210,14 @@ async def cmd_stats(message: Message):
         
         status_emoji = {"online": "🟢", "busy": "🟡", "offline": "🔴"}.get(stats['status'], "⚪")
         
+        # Конвертация времени в МСК
+        last_seen_str = "Никогда"
+        if stats.get('last_seen'):
+            last_seen_utc = stats['last_seen'].replace(tzinfo=timezone.utc)
+            msk_tz = timezone(timedelta(hours=3))
+            last_seen_msk = last_seen_utc.astimezone(msk_tz)
+            last_seen_str = last_seen_msk.strftime('%d.%m.%Y %H:%M:%S')
+
         stats_text = f"""
 📊 **Статистика работы**
 
@@ -223,7 +231,7 @@ async def cmd_stats(message: Message):
 ⏱️ **Среднее время ответа:** {stats['avg_response_time']}с
 🕐 **Часов работы за неделю:** {stats['week_work_hours']}ч
 
-📅 **Последняя активность:** {stats['last_seen'][:19] if stats['last_seen'] else 'Никогда'}
+📅 **Последняя активность:** {last_seen_str}
         """
         
         await message.answer(stats_text, reply_markup=get_stats_keyboard())

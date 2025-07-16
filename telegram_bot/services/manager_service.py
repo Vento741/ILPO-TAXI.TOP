@@ -2,6 +2,7 @@
 Сервис для управления менеджерами поддержки
 """
 import logging
+from datetime import timezone
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -191,7 +192,7 @@ class ManagerService:
                 # Назначаем заявку
                 application.assigned_manager_id = manager.id
                 application.status = ApplicationStatus.ASSIGNED
-                application.processed_at = datetime.utcnow()
+                application.assigned_at = datetime.now(timezone.utc)
                 
                 # Обновляем статистику менеджера
                 manager.total_applications += 1
@@ -455,28 +456,28 @@ class ManagerService:
                     select(func.count(Application.id)).where(
                         and_(
                             Application.assigned_manager_id == manager.id,
-                            func.date(Application.processed_at) == today
+                            func.date(Application.completed_at) == today
                         )
                     )
                 )
                 today_count = today_applications.scalar() or 0
                 
-                # Статистика сессий за неделю
-                week_ago = datetime.utcnow() - timedelta(days=7)
-                week_sessions = await session.execute(
-                    select(ManagerWorkSession).where(
+                # Часы работы за неделю на основе заявок
+                week_ago = datetime.now(timezone.utc) - timedelta(days=7)
+                completed_apps_week = await session.execute(
+                    select(Application).where(
                         and_(
-                            ManagerWorkSession.manager_id == manager.id,
-                            ManagerWorkSession.started_at >= week_ago
+                            Application.assigned_manager_id == manager.id,
+                            Application.completed_at >= week_ago,
+                            Application.assigned_at.isnot(None)
                         )
                     )
                 )
-                week_sessions = week_sessions.scalars().all()
                 
                 total_work_time = 0
-                for session_obj in week_sessions:
-                    if session_obj.ended_at:
-                        work_time = (session_obj.ended_at - session_obj.started_at).total_seconds()
+                for app in completed_apps_week.scalars().all():
+                    if app.completed_at and app.assigned_at:
+                        work_time = (app.completed_at - app.assigned_at).total_seconds()
                         total_work_time += work_time
                 
                 return {
@@ -488,7 +489,7 @@ class ManagerService:
                     "today_applications": today_count,
                     "avg_response_time": manager.avg_response_time,
                     "week_work_hours": round(total_work_time / 3600, 1),
-                    "last_seen": manager.last_seen.isoformat() if manager.last_seen else None
+                    "last_seen": manager.last_seen
                 }
                 
             except Exception as e:

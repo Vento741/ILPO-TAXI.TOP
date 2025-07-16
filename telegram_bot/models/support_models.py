@@ -94,7 +94,8 @@ class Application(Base):
     # Метаданные
     created_at = Column(DateTime(timezone=True), server_default=func.now(), comment="Время создания")
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), comment="Время обновления")
-    processed_at = Column(DateTime(timezone=True), nullable=True, comment="Время обработки")
+    assigned_at = Column(DateTime(timezone=True), nullable=True, comment="Время назначения")
+    completed_at = Column(DateTime(timezone=True), nullable=True, comment="Время завершения")
     
     # Связи
     assigned_manager = relationship("Manager", back_populates="applications")
