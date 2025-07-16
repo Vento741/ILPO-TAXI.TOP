@@ -545,11 +545,33 @@ class ManagerService:
         """Создать чат поддержки из веб-чата"""
         async with AsyncSessionLocal() as session:
             try:
-                # Находим доступного менеджера
-                available_manager = await self.get_available_manager()
+                # Находим доступного менеджера с детальным логированием
+                logger.info(f"🔍 Начинаем поиск доступного менеджера для веб-чата")
+                available_manager = await self.get_available_manager_for_chat()
                 if not available_manager:
                     logger.warning("⚠️ Нет доступных менеджеров для переключения")
+                    
+                    # Дополнительная диагностика
+                    all_managers = await session.execute(
+                        select(Manager).where(Manager.is_active == True)
+                    )
+                    all_managers_list = all_managers.scalars().all()
+                    
+                    logger.info(f"📊 Всего активных менеджеров: {len(all_managers_list)}")
+                    for mgr in all_managers_list:
+                        logger.info(f"📊 Менеджер {mgr.first_name} (ID: {mgr.telegram_id}) - статус: {mgr.status.value}")
+                        
+                        # Проверяем активные чаты через Redis
+                        redis_chats = await redis_service.get_manager_active_chats(str(mgr.telegram_id))
+                        logger.info(f"📊 Redis чаты для {mgr.first_name}: {len(redis_chats)} (макс: {mgr.max_active_chats})")
+                        
+                        # Проверяем активные чаты через БД
+                        db_chats = [chat for chat in mgr.support_chats if chat.is_active]
+                        logger.info(f"📊 БД чаты для {mgr.first_name}: {len(db_chats)}")
+                    
                     return None
+                else:
+                    logger.info(f"✅ Найден доступный менеджер: {available_manager.first_name}")
                 
                 # Подготавливаем метаданные с историей чата
                 chat_metadata = {
@@ -615,8 +637,8 @@ class ManagerService:
                 logger.error(f"Полная ошибка: {traceback.format_exc()}")
                 return None
     
-    async def get_available_manager(self) -> Optional[Manager]:
-        """Найти доступного менеджера для нового чата"""
+    async def get_available_manager_for_chat(self) -> Optional[Manager]:
+        """Найти доступного менеджера для нового чата (используем Redis для корректного подсчета)"""
         async with AsyncSessionLocal() as session:
             try:
                 # Ищем онлайн менеджеров с наименьшей загрузкой
@@ -625,33 +647,43 @@ class ManagerService:
                         Manager.is_active == True,
                         Manager.status == ManagerStatus.ONLINE
                     )
-                ).options(selectinload(Manager.support_chats))
+                )
                 
                 result = await session.execute(query)
                 managers = result.scalars().all()
                 
                 if not managers:
+                    logger.info("❌ Нет онлайн менеджеров")
                     return None
                 
-                # Находим менеджера с наименьшим количеством активных чатов
+                # Находим менеджера с наименьшим количеством активных чатов (используем Redis)
                 best_manager = None
                 min_chats = float('inf')
                 
                 for manager in managers:
-                    active_chats_count = len([
-                        chat for chat in manager.support_chats 
-                        if chat.is_active
-                    ])
+                    # Используем Redis для актуального подсчета активных чатов
+                    active_chats = await redis_service.get_manager_active_chats(str(manager.telegram_id))
+                    active_count = len(active_chats)
                     
-                    if (active_chats_count < manager.max_active_chats and 
-                        active_chats_count < min_chats):
+                    logger.info(f"🔍 Менеджер {manager.first_name}: {active_count}/{manager.max_active_chats} чатов")
+                    
+                    # Проверяем лимит активных чатов
+                    if active_count < manager.max_active_chats and active_count < min_chats:
+                        min_chats = active_count
                         best_manager = manager
-                        min_chats = active_chats_count
+                        logger.info(f"✅ Потенциальный кандидат: {manager.first_name} с {active_count} чатами")
+                
+                if best_manager:
+                    logger.info(f"🎯 Выбран менеджер: {best_manager.first_name} с {min_chats} активными чатами")
+                else:
+                    logger.warning("❌ Все менеджеры заняты (достигнут лимит чатов)")
                 
                 return best_manager
                 
             except Exception as e:
                 logger.error(f"❌ Ошибка поиска доступного менеджера: {e}")
+                import traceback
+                logger.error(f"Полная ошибка: {traceback.format_exc()}")
                 return None
     
     async def notify_manager_new_chat_by_data(self, manager_telegram_id: int, chat_data: Dict[str, Any], chat_history: List[Dict[str, Any]] = None):
@@ -729,8 +761,6 @@ class ManagerService:
             import traceback
             logger.error(f"Полная ошибка: {traceback.format_exc()}")
 
-
-    
     async def send_message_to_manager(
         self, 
         chat_id: str, 
