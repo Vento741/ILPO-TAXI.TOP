@@ -23,9 +23,19 @@ async def read_root():
         html_content = f.read()
     return HTMLResponse(content=html_content)
 
+@main_router.get("/privacy-policy", response_class=HTMLResponse)
+async def privacy_policy(request: Request):
+    """Страница Политики конфиденциальности"""
+    return templates.TemplateResponse("privacy-policy.html", {"request": request})
+
+@main_router.get("/user-agreement", response_class=HTMLResponse)
+async def user_agreement(request: Request):
+    """Страница Пользовательского соглашения"""
+    return templates.TemplateResponse("user-agreement.html", {"request": request})
+
 @main_router.get("/signup", response_class=HTMLResponse)
 async def signup_page(request: Request):
-    """Страница подключения водителей и курьеров"""
+    """Страница регистрации (синоним для /signup.html)"""
     return templates.TemplateResponse("signup.html", {"request": request})
 
 @main_router.get("/health")
