@@ -31,7 +31,9 @@ class OpenRouterAI:
         
         self.site_url = os.getenv("SITE_URL", "https://ilpo-taxi.top")
         self.site_name = os.getenv("SITE_NAME", "ILPO-TAXI Smart Taxi")
-        
+
+        print(f"DEBUG: OPENROUTER_API_KEY_CONSULTANT = {os.getenv('OPENROUTER_API_KEY_CONSULTANT')}")
+
         if not self.api_key_consultant:
             raise ValueError("OPENROUTER_API_KEY_CONSULTANT не найден в переменных окружения")
         if not self.api_key_search:
