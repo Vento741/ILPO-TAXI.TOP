@@ -85,9 +85,8 @@ TELEGRAM_BOT_FIX.md
 TELEGRAM_BOT_LOGIC.md
 cursor-memory-bank-main/
 # Documentation files
-@/docs
 /docs
-docs/competitor-analysis.md
+/docs/competitor-analysis.md
 # Ignore all files in @/docs directory
-@/docs/
-@/docs/*
+/docs/
+/docs/*
