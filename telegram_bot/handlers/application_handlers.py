@@ -582,11 +582,34 @@ def format_application_details(application: Application) -> str:
             return ""
         return html.escape(str(text))
 
+    # --- Словари для перевода ---
+    citizenship_map = {"rf": "🇷🇺 Гражданин РФ", "eaeu": "🇪🇺 Гражданин ЕАЭС", "other": "🌍 Другое"}
+    work_status_map = {
+        "self_employed": "Самозанятый", "park_self_employed": "Парковая самозанятость",
+        "ip": "ИП (УСН 6%)", "employee": "Трудовой договор", "not_sure": "Не определился"
+    }
+    schedule_map = {"full_time": "Полный день", "part_time": "Неполный день", "flexible": "Гибкий график"}
+    license_map = {"yes": "✅ Есть", "getting": "⏳ В процессе получения", "no": "❌ Нет"}
+    car_map = {"own": "🚗 Собственный", "rent": "Аренда", "provided": "Предоставят", "no": "❌ Нет"}
+    permit_map = {"yes": "✅ Есть", "no": "❌ Нет", "help_needed": "ℹ️ Нужна помощь"}
+    experience_map = {"no": "Нет опыта", "less_year": "Менее года", "1_3_years": "1-3 года", "3_plus_years": "Более 3 лет"}
+    docs_map = {
+        "passport": "Паспорт", "driver_license": "Вод. удостоверение", "snils": "СНИЛС",
+        "inn": "ИНН", "car_docs": "Документы на авто", "medical_cert": "Мед. справка",
+        "work_permit": "Разрешение на работу"
+    }
+
     def format_bool(value: Optional[bool]) -> str:
         """Форматирует булево значение в Да/Нет."""
         if value is None:
             return "Не указано"
-        return "Да" if value else "Нет"
+        return "✅ Да" if value else "❌ Нет"
+        
+    def format_list(items: Optional[list], item_map: dict) -> str:
+        """Форматирует список, переводя его элементы по словарю."""
+        if not items:
+            return "Не указано"
+        return ", ".join([item_map.get(item, h(item)) for item in items])
 
     status_emoji = get_status_emoji(application.status)
     category_text = get_category_text(application.category)
@@ -604,15 +627,14 @@ def format_application_details(application: Application) -> str:
     if application.age:
         text += f"  • <b>Возраст:</b> {h(str(application.age))} лет\n"
     if application.citizenship:
-        citizenship_map = {"rf": "РФ", "eaeu": "ЕАЭС", "other": "Другое"}
         text += f"  • <b>Гражданство:</b> {citizenship_map.get(application.citizenship, h(application.citizenship))}\n"
         
     # --- Рабочие предпочтения ---
     work_prefs = []
     if application.work_status:
-        work_prefs.append(f"  • <b>Статус:</b> {h(application.work_status)}")
+        work_prefs.append(f"  • <b>Статус:</b> {work_status_map.get(application.work_status, h(application.work_status))}")
     if application.work_schedule:
-        work_prefs.append(f"  • <b>График:</b> {h(application.work_schedule)}")
+        work_prefs.append(f"  • <b>График:</b> {schedule_map.get(application.work_schedule, h(application.work_schedule))}")
     if application.preferred_time:
         work_prefs.append(f"  • <b>Время для звонка:</b> {h(application.preferred_time)}")
     if work_prefs:
@@ -621,20 +643,20 @@ def format_application_details(application: Application) -> str:
     # --- Информация по категориям ---
     category_info = []
     # --- Водитель ---
-    if application.category in ['driver', 'both', 'cargo']:
+    if application.category in ['driver', 'both']:
         if application.experience:
-            category_info.append(f"  • <b>Стаж:</b> {h(application.experience)} лет")
+            category_info.append(f"  • <b>Стаж:</b> {h(application.experience)} лет") # experience уже приходит как строка "35"
         if application.has_driver_license:
-            category_info.append(f"  • <b>Права:</b> {h(application.has_driver_license)}")
+            category_info.append(f"  • <b>Права:</b> {license_map.get(application.has_driver_license, h(application.has_driver_license))}")
         if application.has_car:
-            category_info.append(f"  • <b>Свой авто:</b> {h(application.has_car)}")
+            category_info.append(f"  • <b>Свой авто:</b> {car_map.get(application.has_car, h(application.has_car))}")
         if application.car_brand and application.car_model:
             car_year = f" ({application.car_year} г.)" if application.car_year else ""
             category_info.append(f"  • <b>Автомобиль:</b> {h(application.car_brand)} {h(application.car_model)}{h(car_year)}")
         if application.car_class:
             category_info.append(f"  • <b>Желаемый класс:</b> {h(application.car_class)}")
         if application.has_taxi_permit:
-            category_info.append(f"  • <b>Разрешение такси:</b> {h(application.has_taxi_permit)}")
+            category_info.append(f"  • <b>Разрешение такси:</b> {permit_map.get(application.has_taxi_permit, h(application.has_taxi_permit))}")
 
     # --- Курьер ---
     if application.category in ['courier', 'both']:
@@ -644,12 +666,10 @@ def format_application_details(application: Application) -> str:
                 "motorcycle": "🏍️ Мото", "car": "🚗 Авто"
             }
             category_info.append(f"  • <b>Транспорт:</b> {transport_map.get(application.transport, h(application.transport))}")
-        if application.delivery_types:
-            category_info.append(f"  • <b>Типы доставки:</b> {h(str(application.delivery_types))}")
         if application.has_thermo_bag:
-            category_info.append(f"  • <b>Термосумка:</b> {h(application.has_thermo_bag)}")
+            category_info.append(f"  • <b>Термосумка:</b> {permit_map.get(application.has_thermo_bag, h(application.has_thermo_bag))}")
         if application.courier_license:
-             category_info.append(f"  • <b>Права (курьер):</b> {h(application.courier_license)}")
+             category_info.append(f"  • <b>Права (курьер):</b> {license_map.get(application.courier_license, h(application.courier_license))}")
 
     # --- Грузовой ---
     if application.category == 'cargo':
@@ -666,13 +686,13 @@ def format_application_details(application: Application) -> str:
     # --- Опыт и документы ---
     docs_info = []
     if application.work_experience:
-        docs_info.append(f"  • <b>Опыт в сфере:</b> {h(application.work_experience)}")
+        docs_info.append(f"  • <b>Опыт в сфере:</b> {experience_map.get(application.work_experience, h(application.work_experience))}")
     if application.previous_platforms:
         docs_info.append(f"  • <b>Работал в:</b> {h(application.previous_platforms)}")
     if application.has_medical_cert:
-        docs_info.append(f"  • <b>Мед. справка:</b> {h(application.has_medical_cert)}")
+        docs_info.append(f"  • <b>Мед. справка:</b> {permit_map.get(application.has_medical_cert, h(application.has_medical_cert))}")
     if application.available_documents:
-        docs_info.append(f"  • <b>Документы:</b> {h(str(application.available_documents))}")
+        docs_info.append(f"  • <b>Документы:</b> {format_list(application.available_documents, docs_map)}")
     if docs_info:
         text += "\n🗂 <b>Опыт и документы:</b>\n" + "\n".join(docs_info) + "\n"
 
@@ -700,7 +720,7 @@ def format_application_details(application: Application) -> str:
     text += "\n⚖️ <b>Согласия:</b>\n" + "\n".join(agreements) + "\n"
         
     if application.notes:
-        text += f"\n <b>Заметки менеджера:</b>\n<i>{h(application.notes)}</i>\n"
+        text += f"\n🗒 <b>Заметки менеджера:</b>\n<i>{h(application.notes)}</i>\n"
             
     return text
 
