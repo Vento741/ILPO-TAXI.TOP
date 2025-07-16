@@ -601,14 +601,6 @@ def format_application_details(application: Application) -> str:
     if application.category == 'cargo':
         if application.load_capacity:
             text += f"• <b>Грузоподъемность:</b> {h(application.load_capacity)}\n"
-        if application.vehicle_details:
-             text += f"• <b>Детали транспорта:</b> {h(application.vehicle_details)}\n"
-
-    if application.slogan:
-        text += f"💬 <b>Слоган:</b> <i>{h(application.slogan)}</i>\n"
-
-    if application.description:
-        text += f"📝 <b>О себе:</b>\n{h(application.description)}\n"
         
     text += f"\n📅 <b>Дата подачи:</b> {application.created_at.strftime('%d.%m.%Y %H:%M')}\n"
     text += f"📊 <b>Статус:</b> {h(application.status.value.upper())}\n"
@@ -622,11 +614,7 @@ def format_application_details(application: Application) -> str:
         text += f"⚡️ <b>Обработана:</b> {application.processed_at.strftime('%d.%m.%Y %H:%M')}\n"
         
     if application.notes:
-        text += f"\n🗒 <b>Заметки менеджера:</b>\n"
-        notes_list = sorted(application.notes, key=lambda note: note.created_at, reverse=True)
-        for note in notes_list:
-            note_date = note.created_at.strftime('%d.%m.%Y %H:%M')
-            text += f"  - <i>({note_date})</i>: {h(note.text)}\n"
+        text += f"\n🗒 <b>Заметки менеджера:</b>\n<i>{h(application.notes)}</i>\n"
             
     return text
 
