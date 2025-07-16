@@ -414,4 +414,8 @@ class OpenRouterAI:
         return '\n'.join(result_lines)
 
 # Создаем глобальный экземпляр
-openrouter_ai = OpenRouterAI() 
+openrouter_ai = OpenRouterAI(
+    api_key_consultant=os.getenv("OPENROUTER_API_KEY_CONSULTANT"),
+    api_key_search=os.getenv("OPENROUTER_API_KEY_SEARCH"),
+    base_url=os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
+) 
