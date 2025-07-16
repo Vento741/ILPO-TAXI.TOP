@@ -248,43 +248,53 @@ class ManagerService:
                                 Application.assigned_manager_id == manager.id,
                                 Application.status.in_([
                                     ApplicationStatus.ASSIGNED, 
-                                    ApplicationStatus.IN_PROGRESS,
-                                    ApplicationStatus.WAITING_CLIENT
+                                    ApplicationStatus.IN_PROGRESS
                                 ])
                             )
                         )
-                    )
-                elif show_all and manager.is_admin:
-                    query = select(Application).order_by(desc(Application.created_at))
-                    if status:
-                        if status == ApplicationStatus.IN_PROGRESS:
-                            query = query.where(Application.status.in_([
-                                ApplicationStatus.ASSIGNED,
-                                ApplicationStatus.IN_PROGRESS
-                            ]))
-                        else:
-                            query = query.where(Application.status == status)
-                else:
-                    # Заявки конкретного менеджера
+                    ).options(selectinload(Application.assigned_manager))
+                # Если запрашиваются заявки в работе
+                elif status == ApplicationStatus.IN_PROGRESS:
                     query = select(Application).where(
-                        Application.assigned_manager_id == manager.id
-                    ).order_by(desc(Application.created_at))
-                    if status:
-                        if status == ApplicationStatus.IN_PROGRESS:
-                            # "В работе" включает назначенные и те, что уже в процессе
-                            query = query.where(Application.status.in_([
+                        and_(
+                            Application.assigned_manager_id == manager.id,
+                            Application.status.in_([
                                 ApplicationStatus.ASSIGNED,
                                 ApplicationStatus.IN_PROGRESS
-                            ]))
-                        else:
-                            query = query.where(Application.status == status)
+                            ])
+                        )
+                    ).options(selectinload(Application.assigned_manager))
+                # Если запрашиваются все заявки (для админа)
+                elif show_all:
+                    query = select(Application).where(
+                        Application.status != ApplicationStatus.COMPLETED
+                    ).options(
+                        selectinload(Application.assigned_manager)
+                    )
+                # Если status is None (мои заявки) - исключаем завершенные
+                elif status is None:
+                    query = select(Application).where(
+                        and_(
+                            Application.assigned_manager_id == manager.id,
+                            Application.status != ApplicationStatus.COMPLETED
+                        )
+                    ).options(selectinload(Application.assigned_manager))
+                # Все остальные конкретные статусы (включая COMPLETED)
+                else:
+                    query = select(Application).where(
+                        Application.status == status
+                    ).options(selectinload(Application.assigned_manager))
 
-                # Добавляем пагинацию
-                query = query.limit(limit).offset(offset)
-                
+                    # Админ может видеть все заявки с этим статусом,
+                    # обычный менеджер - только свои.
+                    if not manager.is_admin:
+                         query = query.where(Application.assigned_manager_id == manager.id)
+
+                # Добавляем сортировку и пагинацию
+                query = query.order_by(desc(Application.created_at)).limit(limit).offset(offset)
+
                 result = await session.execute(query)
                 return result.scalars().all()
-                
             except Exception as e:
                 logger.error(f"❌ Ошибка получения заявок менеджера: {e}")
                 return []

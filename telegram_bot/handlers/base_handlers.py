@@ -72,7 +72,7 @@ async def cmd_start(message: Message, state: FSMContext):
 Чтобы начать работу, нажмите /online
                 """
                 
-                await message.answer(welcome_text, reply_markup=get_manager_main_keyboard(is_admin))
+                await message.answer(welcome_text, reply_markup=get_manager_main_keyboard(is_admin, "offline"))
                 await state.set_state(ManagerStates.OFFLINE)
                 
             else:
@@ -98,7 +98,7 @@ async def cmd_start(message: Message, state: FSMContext):
 Выберите действие:
             """
             
-            await message.answer(welcome_text, reply_markup=get_manager_main_keyboard(manager.is_admin))
+            await message.answer(welcome_text, reply_markup=get_manager_main_keyboard(manager.is_admin, manager.status.value))
             
             # Устанавливаем состояние в зависимости от статуса
             if manager.status == ManagerStatus.ONLINE:
@@ -133,7 +133,7 @@ async def cmd_online(message: Message, state: FSMContext):
                 f"Привет, {manager.first_name}! Вы готовы принимать заявки и чаты.\n"
                 f"Максимум активных чатов: {manager.max_active_chats}\n\n"
                 f"Для завершения смены используйте /offline",
-                reply_markup=get_online_keyboard(manager.is_admin)
+                reply_markup=get_manager_main_keyboard(manager.is_admin, "online")
             )
             await state.set_state(ManagerStates.ONLINE)
         else:
@@ -180,7 +180,7 @@ async def cmd_offline(message: Message, state: FSMContext):
                     f"🔴 **Смена завершена**\n\n"
                     f"До встречи, {manager.first_name}! 👋\n"
                     f"Для начала новой смены используйте /online",
-                    reply_markup=get_manager_main_keyboard(manager.is_admin)
+                    reply_markup=get_manager_main_keyboard(manager.is_admin, "offline")
                 )
                 await state.set_state(ManagerStates.OFFLINE)
             else:
@@ -349,10 +349,9 @@ async def cmd_admin(message: Message):
         """
         
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="📋 Управление заявками", callback_data="applications_menu")],
             [InlineKeyboardButton(text="👥 Управление менеджерами", callback_data="manage_managers")],
             [InlineKeyboardButton(text="📈 Отчеты", callback_data="admin_reports")],
-            [InlineKeyboardButton(text="📋 Все заявки", callback_data="all_applications")],
-            [InlineKeyboardButton(text="⚙️ Настройки", callback_data="admin_settings")],
             [InlineKeyboardButton(text="🔄 Обновить", callback_data="refresh_admin")],
             [InlineKeyboardButton(text="◀️ Главное меню", callback_data="back_to_main")]
         ])
@@ -523,7 +522,7 @@ async def callback_confirm_offline(callback: CallbackQuery, state: FSMContext):
                 f"🔴 **Смена завершена**\n\n"
                 f"До встречи, {manager.first_name}! 👋\n"
                 f"Для начала новой смены используйте /online",
-                reply_markup=get_manager_main_keyboard(manager.is_admin)
+                reply_markup=get_manager_main_keyboard(manager.is_admin, "offline")
             )
             await state.set_state(ManagerStates.OFFLINE)
         else:
@@ -564,7 +563,7 @@ async def callback_go_online(callback: CallbackQuery, state: FSMContext):
                 f"Привет, {manager.first_name}! Вы готовы принимать заявки и чаты.\n"
                 f"Максимум активных чатов: {manager.max_active_chats}\n\n"
                 f"Выберите действие:",
-                reply_markup=get_online_keyboard(manager.is_admin)
+                reply_markup=get_manager_main_keyboard(manager.is_admin, "online")
             )
             await state.set_state(ManagerStates.ONLINE)
         else:
@@ -608,7 +607,7 @@ async def callback_go_offline(callback: CallbackQuery, state: FSMContext):
                     f"🔴 **Смена завершена**\n\n"
                     f"До встречи, {manager.first_name}! 👋\n"
                     f"Для начала новой смены используйте /online",
-                    reply_markup=get_manager_main_keyboard(manager.is_admin)
+                    reply_markup=get_manager_main_keyboard(manager.is_admin, "offline")
                 )
                 await state.set_state(ManagerStates.OFFLINE)
             else:
@@ -776,7 +775,7 @@ async def callback_back_to_main(callback: CallbackQuery, state: FSMContext):
 Выберите действие:
         """
         
-        keyboard = get_manager_main_keyboard(manager.is_admin) if manager.status.value == "offline" else get_online_keyboard(manager.is_admin)
+        keyboard = get_manager_main_keyboard(manager.is_admin, manager.status.value)
         await callback.message.edit_text(welcome_text, reply_markup=keyboard)
     except Exception as e:
         logger.error(f"❌ Ошибка возврата в главное меню: {e}")
@@ -812,9 +811,9 @@ async def callback_admin_panel(callback: CallbackQuery):
         """
         
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="📋 Управление заявками", callback_data="applications_menu")],
             [InlineKeyboardButton(text="👥 Управление менеджерами", callback_data="manage_managers")],
             [InlineKeyboardButton(text="📈 Отчеты", callback_data="admin_reports")],
-            [InlineKeyboardButton(text="⚙️ Настройки", callback_data="admin_settings")],
             [InlineKeyboardButton(text="◀️ Назад", callback_data="back_to_main")]
         ])
         
@@ -836,10 +835,7 @@ async def callback_admin_reports(callback: CallbackQuery):
     await cmd_reports(callback.message)
     await callback.answer()
 
-@base_router.callback_query(F.data == "admin_settings")
-async def callback_admin_settings(callback: CallbackQuery):
-    """Настройки администратора"""
-    await callback.answer("🚧 Раздел в разработке")
+
 
 @base_router.callback_query(F.data == "refresh_admin")
 async def callback_refresh_admin(callback: CallbackQuery):
@@ -1053,7 +1049,7 @@ async def callback_export_data(callback: CallbackQuery):
 
 @base_router.callback_query(F.data == "all_applications")
 async def callback_all_applications(callback: CallbackQuery):
-    """Все заявки системы (для админов)"""
+    """Все заявки системы (для админов) - перенаправление на меню заявок"""
     user = callback.from_user
     telegram_id = int(user.id)
     
@@ -1063,87 +1059,45 @@ async def callback_all_applications(callback: CallbackQuery):
             await callback.answer("❌ У вас нет прав администратора.")
             return
         
-        # Получаем новые заявки через manager_service
-        pending_applications = await manager_service.get_available_new_applications(limit=20)
+        # Перенаправляем администратора на стандартное меню заявок
+        # где у него будет доступ к разделу "Все заявки (Админ)"
+        await callback.answer("Перенаправляю в управление заявками...")
         
-        if not pending_applications:
-            await callback.message.edit_text(
-                "📋 **Все заявки системы**\n\n"
-                "В системе нет новых заявок.",
-                reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                    [InlineKeyboardButton(text="🔄 Обновить", callback_data="all_applications")],
-                    [InlineKeyboardButton(text="◀️ Админ панель", callback_data="admin_panel")]
-                ])
-            )
-            return
-        
-        text = f"📋 **Все заявки системы ({len(pending_applications)})**\n\n"
-        
-        for app in pending_applications[:10]:
-            category_text = {
-                "driver": "🚗 Водитель",
-                "courier": "📦 Курьер",
-                "both": "🚗📦 Универсал",
-                "cargo": "🚛 Грузовой"
-            }.get(app.category, app.category)
-            
-            status_text = {
-                "new": "🆕 Новая",
-                "assigned": "👤 Назначена",
-                "in_progress": "⚙️ В работе",
-                "completed": "✅ Завершена"
-            }.get(app.status.value, app.status.value)
-            
-            text += f"**#{app.id}** | {category_text}\n"
-            text += f"👤 {app.full_name}\n"
-            text += f"📱 {app.phone} | 🏙️ {app.city}\n"
-            text += f"📊 {status_text}\n"
-            text += f"📅 {app.created_at.strftime('%d.%m %H:%M')}\n\n"
-        
-        if len(pending_applications) > 10:
-            text += f"... и еще {len(pending_applications) - 10} заявок"
-        
-        keyboard = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="🔄 Обновить", callback_data="all_applications")],
-            [InlineKeyboardButton(text="📈 Отчеты", callback_data="admin_reports")],
-            [InlineKeyboardButton(text="◀️ Админ панель", callback_data="admin_panel")]
-        ])
-        
-        await callback.message.edit_text(text, reply_markup=keyboard)
+        # Вызываем стандартное меню заявок
+        from telegram_bot.handlers.application_handlers import callback_applications_menu
+        await callback_applications_menu(callback)
         
     except Exception as e:
-        logger.error(f"❌ Ошибка получения всех заявок: {e}")
+        logger.error(f"❌ Ошибка перенаправления на управление заявками: {e}")
         await callback.answer("❌ Произошла ошибка при получении заявок")
 
 # Функции для создания клавиатур
-def get_manager_main_keyboard(is_admin: bool = False) -> InlineKeyboardMarkup:
+def get_manager_main_keyboard(is_admin: bool = False, manager_status: str = "offline") -> InlineKeyboardMarkup:
     """Главная клавиатура менеджера"""
-    buttons = [
-        [InlineKeyboardButton(text="🟢 Начать смену", callback_data="go_online")],
-        [InlineKeyboardButton(text="📊 Статистика", callback_data="show_stats")],
-        [InlineKeyboardButton(text="📋 Мои заявки", callback_data="my_applications")],
-        [InlineKeyboardButton(text="📋 Все заявки", callback_data="all_applications")],
-    ]
+    buttons = []
     
+    # Динамическая кнопка смены в зависимости от статуса
+    if manager_status == "offline":
+        buttons.append([InlineKeyboardButton(text="🟢 Начать смену", callback_data="go_online")])
+    else:
+        buttons.append([InlineKeyboardButton(text="🔴 Завершить смену", callback_data="go_offline")])
+    
+    # Основные функции для всех менеджеров
+    buttons.extend([
+        [InlineKeyboardButton(text="📋 Управление заявками", callback_data="applications_menu")],
+        [InlineKeyboardButton(text="📊 Статистика", callback_data="show_stats")]
+    ])
+    
+    # Дополнительная кнопка для админов
     if is_admin:
-        buttons.append([InlineKeyboardButton(text="⚙️ Админ панель", callback_data="admin_panel")])
+        buttons.append([InlineKeyboardButton(text="⚙️ Настройки", callback_data="admin_panel")])
     
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 def get_online_keyboard(is_admin: bool = False) -> InlineKeyboardMarkup:
-    """Клавиатура для онлайн режима"""
-    buttons = [
-        [InlineKeyboardButton(text="📋 Новые заявки", callback_data="new_applications")],
-        [InlineKeyboardButton(text="📋 Все заявки", callback_data="all_applications")],
-        [InlineKeyboardButton(text="💬 Активные чаты", callback_data="active_chats")],
-        [InlineKeyboardButton(text="📊 Статистика", callback_data="show_stats")],
-        [InlineKeyboardButton(text="🔴 Завершить смену", callback_data="go_offline")],
-    ]
-    
-    if is_admin:
-        buttons.append([InlineKeyboardButton(text="⚙️ Админ панель", callback_data="admin_panel")])
-    
-    return InlineKeyboardMarkup(inline_keyboard=buttons)
+    """Клавиатура для онлайн режима (устаревшая, заменена на get_manager_main_keyboard)"""
+    # Теперь используем единую главную клавиатуру
+    return get_manager_main_keyboard(is_admin, "online")
 
 def get_stats_keyboard() -> InlineKeyboardMarkup:
     """Клавиатура для статистики"""

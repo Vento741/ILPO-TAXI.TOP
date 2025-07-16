@@ -30,7 +30,7 @@ async def cmd_test(message: Message):
 
 @application_router.message(Command("applications"))
 async def cmd_applications(message: Message):
-    """Показать список заявок менеджера"""
+    """Показать меню управления заявками"""
     user = message.from_user
     telegram_id = int(user.id)
     
@@ -40,40 +40,34 @@ async def cmd_applications(message: Message):
             await message.answer("❌ Вы не зарегистрированы как менеджер.", parse_mode=ParseMode.HTML)
             return
         
-        # Получаем все заявки менеджера (без фильтра по статусу)
-        applications = await manager_service.get_manager_applications(telegram_id, limit=10)
+        # Перенаправляем на стандартизированное меню заявок
+        keyboard_buttons = [
+            [InlineKeyboardButton(text="📋 Мои заявки", callback_data="my_applications")],
+            [InlineKeyboardButton(text="🆕 Новые заявки", callback_data="new_applications")],
+            [InlineKeyboardButton(text="⚙️ В работе", callback_data="in_progress_applications")],
+            [InlineKeyboardButton(text="✅ Завершенные", callback_data="completed_applications")]
+        ]
         
-        if not applications:
-            await message.answer(
-                "📋 <b>Список заявок пуст</b>\n\n"
-                "У вас пока нет назначенных заявок.",
-                reply_markup=get_applications_empty_keyboard(),
-                parse_mode=ParseMode.HTML
-            )
-            return
+        if manager.is_admin:
+            keyboard_buttons.append([
+                InlineKeyboardButton(text="🗂️ Все заявки (Админ)", callback_data="all_applications")
+            ])
         
-        # Формируем список заявок
-        text = "<b>📋 Ваши заявки:</b>\n\n"
+        keyboard_buttons.append([
+            InlineKeyboardButton(text="◀️ Главное меню", callback_data="back_to_main")
+        ])
         
-        for app in applications:
-            status_emoji = get_status_emoji(app.status)
-            category_text = get_category_text(app.category)
-            
-            text += f"{status_emoji} <b>Заявка #{app.id}</b>\n"
-            text += f"👤 {html.escape(app.full_name)}\n"
-            text += f"📱 <code>{html.escape(app.phone)}</code>\n"
-            text += f"🏙️ {html.escape(app.city)}\n"
-            text += f"{category_text}\n"  # Эмодзи уже в category_text
-            text += f"📅 {app.created_at.strftime('%d.%m.%Y %H:%M')}\n\n"
+        keyboard = InlineKeyboardMarkup(inline_keyboard=keyboard_buttons)
         
-        # Добавляем метку времени, чтобы сообщение всегда было разным
-        current_time = datetime.utcnow().strftime('%H:%M:%S')
-        text += f"\nОбновлено: {current_time}"
-        
-        await message.answer(text, reply_markup=get_applications_keyboard(), parse_mode=ParseMode.HTML)
+        await message.answer(
+            "<b>📋 Управление заявками</b>\n\n"
+            "Выберите категорию заявок для просмотра:",
+            reply_markup=keyboard,
+            parse_mode=ParseMode.HTML
+        )
     
     except Exception as e:
-        logger.error(f"❌ Ошибка получения заявок: {e}")
+        logger.error(f"❌ Ошибка отображения меню заявок: {e}")
         await message.answer("❌ Произошла ошибка при получении заявок.", parse_mode=ParseMode.HTML)
 
 # Вспомогательная функция для обработки списка заявок через callback
@@ -488,22 +482,24 @@ async def callback_applications_menu(callback: CallbackQuery):
     if not manager:
         await callback.answer("❌ Вы не зарегистрированы как менеджер.", show_alert=True)
         return
-        
+    
+    # Стандартизированное меню заявок
     keyboard_buttons = [
         [InlineKeyboardButton(text="📋 Мои заявки", callback_data="my_applications")],
         [InlineKeyboardButton(text="🆕 Новые заявки", callback_data="new_applications")],
         [InlineKeyboardButton(text="⚙️ В работе", callback_data="in_progress_applications")],
-        [InlineKeyboardButton(text="✅ Завершенные", callback_data="completed_applications")],
+        [InlineKeyboardButton(text="✅ Завершенные", callback_data="completed_applications")]
     ]
     
+    # Добавляем админские функции только для админов
     if manager.is_admin:
-        keyboard_buttons.append(
-            [InlineKeyboardButton(text="🗂️ Все заявки (Админ)", callback_data="all_applications")]
-        )
+        keyboard_buttons.append([
+            InlineKeyboardButton(text="🗂️ Все заявки (Админ)", callback_data="all_applications")
+        ])
     
-    keyboard_buttons.append(
-        [InlineKeyboardButton(text="◀️ Назад", callback_data="back_to_main")]
-    )
+    keyboard_buttons.append([
+        InlineKeyboardButton(text="◀️ Назад", callback_data="back_to_main")
+    ])
     
     keyboard = InlineKeyboardMarkup(inline_keyboard=keyboard_buttons)
     
@@ -607,7 +603,7 @@ def format_application_details(application: Application) -> str:
     status_map = {
         "new": "🆕 Новая", "assigned": "👤 Назначена", "in_progress": "⚙️ В работе",
         "waiting_client": "⏳ Ожидание клиента", "completed": "✅ Завершена", "cancelled": "❌ Отменена"
-    }
+            }
 
     def format_bool(value: Optional[bool]) -> str:
         """Форматирует булево значение в Да/Нет."""
@@ -638,7 +634,7 @@ def format_application_details(application: Application) -> str:
         text += f"  • <b>Возраст:</b> {h(str(application.age))} лет\n"
     if application.citizenship:
         text += f"  • <b>Гражданство:</b> {citizenship_map.get(application.citizenship, h(application.citizenship))}\n"
-        
+    
     # --- Рабочие предпочтения ---
     work_prefs = []
     if application.work_status:
@@ -649,23 +645,23 @@ def format_application_details(application: Application) -> str:
         work_prefs.append(f"  • <b>Время для звонка:</b> {h(application.preferred_time)}")
     if work_prefs:
         text += "\n🗓 <b>Рабочие предпочтения:</b>\n" + "\n".join(work_prefs) + "\n"
-
+    
     # --- Информация по категориям ---
     category_info = []
     # --- Водитель ---
     if application.category in ['driver', 'both']:
         if application.experience:
             category_info.append(f"  • <b>Стаж:</b> {h(application.experience)} лет") # experience уже приходит как строка "35"
-        if application.has_driver_license:
+    if application.has_driver_license:
             category_info.append(f"  • <b>Права:</b> {license_map.get(application.has_driver_license, h(application.has_driver_license))}")
-        if application.has_car:
+    if application.has_car:
             category_info.append(f"  • <b>Свой авто:</b> {car_map.get(application.has_car, h(application.has_car))}")
-        if application.car_brand and application.car_model:
+    if application.car_brand and application.car_model:
             car_year = f" ({application.car_year} г.)" if application.car_year else ""
             category_info.append(f"  • <b>Автомобиль:</b> {h(application.car_brand)} {h(application.car_model)}{h(car_year)}")
-        if application.car_class:
+    if application.car_class:
             category_info.append(f"  • <b>Желаемый класс:</b> {car_class_map.get(application.car_class, h(application.car_class))}")
-        if application.has_taxi_permit:
+    if application.has_taxi_permit:
             category_info.append(f"  • <b>Разрешение такси:</b> {permit_map.get(application.has_taxi_permit, h(application.has_taxi_permit))}")
 
     # --- Курьер ---
@@ -680,7 +676,7 @@ def format_application_details(application: Application) -> str:
             category_info.append(f"  • <b>Термосумка:</b> {permit_map.get(application.has_thermo_bag, h(application.has_thermo_bag))}")
         if application.courier_license:
              category_info.append(f"  • <b>Права (курьер):</b> {license_map.get(application.courier_license, h(application.courier_license))}")
-
+    
     # --- Грузовой ---
     if application.category == 'cargo':
         if application.load_capacity:
@@ -705,11 +701,11 @@ def format_application_details(application: Application) -> str:
         docs_info.append(f"  • <b>Документы:</b> {format_list(application.available_documents, docs_map)}")
     if docs_info:
         text += "\n🗂 <b>Опыт и документы:</b>\n" + "\n".join(docs_info) + "\n"
-
+    
     # --- Комментарий клиента ---
     if application.comments:
         text += f"\n💬 <b>Комментарий клиента:</b>\n<i>{h(application.comments)}</i>\n"
-        
+    
     # --- Служебная информация ---
     text += f"\n- - - - - - - - - - - - - - - - - -\n"
     text += f"<b>Статус:</b> {status_map.get(application.status.value, h(application.status.value.upper()))}\n"
@@ -721,17 +717,17 @@ def format_application_details(application: Application) -> str:
         text += f"<b>Менеджер:</b> {h(application.assigned_manager.first_name)} {h(application.assigned_manager.last_name or '')}\n"
     else:
         text += f"<b>Менеджер:</b> Не назначен\n"
-
+    
     # --- Согласия ---
     agreements = []
     agreements.append(f"  • <b>Наличие документов:</b> {format_bool(application.has_documents_confirmed)}")
     agreements.append(f"  • <b>Условия работы:</b> {format_bool(application.agree_terms)}")
     agreements.append(f"  • <b>Рассылка:</b> {format_bool(application.agree_marketing)}")
     text += "\n⚖️ <b>Согласия:</b>\n" + "\n".join(agreements) + "\n"
-        
+    
     if application.notes:
         text += f"\n🗒 <b>Заметки менеджера:</b>\n<i>{h(application.notes)}</i>\n"
-            
+    
     return text
 
 def get_status_emoji(status: ApplicationStatus) -> str:
@@ -756,38 +752,14 @@ def get_category_text(category: str) -> str:
     }
     return categories.get(category, category)
 
-def get_applications_keyboard() -> InlineKeyboardMarkup:
-    """Клавиатура для списка заявок"""
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🔄 Обновить", callback_data="refresh_applications")],
-        [InlineKeyboardButton(text="📋 Новые заявки", callback_data="new_applications")],
-        [InlineKeyboardButton(text="📋 Назначенные заявки", callback_data="assigned_applications")],
-        [InlineKeyboardButton(text="⚙️ В работе", callback_data="in_progress_applications")],
-        [InlineKeyboardButton(text="✅ Завершенные", callback_data="completed_applications")],
-        [InlineKeyboardButton(text="📋 Все заявки", callback_data="all_applications")],
-        [InlineKeyboardButton(text="◀️ Назад", callback_data="back_to_main")]
-    ])
+
 
 def get_applications_empty_keyboard() -> InlineKeyboardMarkup:
     """Клавиатура для пустого списка заявок"""
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🔄 Обновить", callback_data="refresh_applications")],
-        [InlineKeyboardButton(text="◀️ Главное меню", callback_data="back_to_main")]
+        [InlineKeyboardButton(text="◀️ Управление заявками", callback_data="applications_menu")]
     ])
-
-def get_application_detail_keyboard(app_id: int, has_more: bool = False) -> InlineKeyboardMarkup:
-    """Клавиатура для детального просмотра заявки"""
-    buttons = [
-        [InlineKeyboardButton(text="✅ Взять в работу", callback_data=f"app_take_{app_id}")],
-        [InlineKeyboardButton(text="📞 Контакты клиента", callback_data=f"app_contact_{app_id}")],
-    ]
-    
-    if has_more:
-        buttons.append([InlineKeyboardButton(text="➡️ Следующая заявка", callback_data="next_application")])
-    
-    buttons.append([InlineKeyboardButton(text="◀️ К списку заявок", callback_data="my_applications")])
-    
-    return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 def get_taken_application_keyboard(app_id: int) -> InlineKeyboardMarkup:
     """Клавиатура для взятой в работу заявки"""
@@ -795,14 +767,13 @@ def get_taken_application_keyboard(app_id: int) -> InlineKeyboardMarkup:
         [InlineKeyboardButton(text="✅ Завершить заявку", callback_data=f"app_complete_{app_id}")],
         [InlineKeyboardButton(text="📞 Связаться с клиентом", callback_data=f"app_contact_{app_id}")],
         [InlineKeyboardButton(text="📝 Добавить заметку", callback_data=f"app_note_{app_id}")],
-        [InlineKeyboardButton(text="◀️ К списку заявок", callback_data="my_applications")]
+        [InlineKeyboardButton(text="◀️ Управление заявками", callback_data="applications_menu")]
     ])
 
 def get_completed_application_keyboard() -> InlineKeyboardMarkup:
     """Клавиатура для завершенной заявки"""
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="📋 Мои заявки", callback_data="my_applications")],
-        [InlineKeyboardButton(text="🆕 Новые заявки", callback_data="new_applications")],
+        [InlineKeyboardButton(text="📋 Управление заявками", callback_data="applications_menu")],
         [InlineKeyboardButton(text="◀️ Главное меню", callback_data="back_to_main")]
     ])
 
