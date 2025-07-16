@@ -42,11 +42,48 @@ class Application(Base):
     age = Column(Integer, nullable=True, comment="Возраст")
     city = Column(String(100), nullable=False, comment="Город")
     category = Column(String(50), nullable=False, comment="Категория: driver, courier, both, cargo")
+    email = Column(String(255), nullable=True, comment="Email клиента")
     
-    # Дополнительная информация
+    # Новые основные поля
+    citizenship = Column(String(50), nullable=True, comment="Гражданство: rf, eaeu, other")
+    work_status = Column(String(100), nullable=True, comment="Предпочитаемый статус работы")
+    preferred_time = Column(String(50), nullable=True, comment="Удобное время для звонка")
+    work_schedule = Column(String(100), nullable=True, comment="Предпочитаемый график работы")
+    comments = Column(Text, nullable=True, comment="Дополнительные комментарии")
+    
+    # Информация для водителей (расширенная)
     experience = Column(String(50), nullable=True, comment="Стаж вождения")
+    has_driver_license = Column(String(50), nullable=True, comment="Наличие водительских прав")
+    has_car = Column(String(50), nullable=True, comment="Наличие автомобиля")
+    car_brand = Column(String(100), nullable=True, comment="Марка автомобиля")
+    car_model = Column(String(100), nullable=True, comment="Модель автомобиля")
+    car_year = Column(Integer, nullable=True, comment="Год выпуска автомобиля")
+    car_class = Column(String(50), nullable=True, comment="Желаемый класс автомобиля")
+    has_taxi_permit = Column(String(50), nullable=True, comment="Наличие разрешения на такси")
+    
+    # Информация для курьеров (расширенная)
     transport = Column(String(50), nullable=True, comment="Вид транспорта для курьеров")
+    delivery_types = Column(JSON, nullable=True, comment="Категории доставки (массив)")
+    has_thermo_bag = Column(String(50), nullable=True, comment="Наличие термосумки")
+    courier_license = Column(String(50), nullable=True, comment="Права для автокурьеров")
+    
+    # Информация для грузовых перевозок (расширенная)
     load_capacity = Column(String(50), nullable=True, comment="Грузоподъемность")
+    truck_type = Column(String(50), nullable=True, comment="Тип кузова")
+    cargo_license = Column(String(50), nullable=True, comment="Права на грузовой транспорт")
+    
+    # Документы и опыт (новые поля)
+    work_experience = Column(String(100), nullable=True, comment="Опыт работы в такси/доставке")
+    previous_platforms = Column(String(255), nullable=True, comment="Предыдущие платформы работы")
+    has_medical_cert = Column(String(50), nullable=True, comment="Наличие медицинской справки")
+    available_documents = Column(JSON, nullable=True, comment="Имеющиеся документы (массив)")
+    
+    # Согласия (новые поля)
+    has_documents_confirmed = Column(Boolean, default=False, comment="Подтвердил наличие документов")
+    agree_terms = Column(Boolean, default=False, comment="Согласие с условиями работы")
+    agree_marketing = Column(Boolean, default=False, comment="Согласие на рассылку")
+    
+    # Дополнительная информация (сохраняем как есть для совместимости)
     additional_info = Column(Text, nullable=True, comment="Дополнительная информация")
     
     # Статус и обработка

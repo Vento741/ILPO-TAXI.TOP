@@ -107,17 +107,54 @@ async def signup_application(request: Request):
         application_data = {
             "id": f"app_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{category}",
             "category": category,
+            
+            # Основные поля (используем правильные имена полей из формы)
             "full_name": data["fullName"],
             "phone": data["phone"],
             "age": int(data["age"]),
             "city": data["city"],
             "email": data.get("email", ""),
+            
+            # Новые основные поля
+            "citizenship": data.get("citizenship"),
+            "workStatus": data.get("workStatus"),
+            "preferredTime": data.get("preferredTime"),
+            "workSchedule": data.get("workSchedule"),
+            "comments": data.get("comments"),
+            
+            # Информация для водителей
             "experience": data.get("experience"),
-            "car_model": data.get("carModel", ""),
+            "hasDriverLicense": data.get("hasDriverLicense"),
+            "hasCar": data.get("hasCar"),
+            "carBrand": data.get("carBrand"),
+            "carModel": data.get("carModel"),
+            "carYear": data.get("carYear"),
+            "carClass": data.get("carClass"),
+            "hasTaxiPermit": data.get("hasTaxiPermit"),
+            
+            # Информация для курьеров
             "transport": data.get("transport", ""),
-            "load_capacity": data.get("loadCapacity", ""),
-            "has_documents": data.get("hasDocuments", False),
-            "agree_terms": data.get("agreeTerms", False),
+            "deliveryType": data.get("deliveryType", []),
+            "hasThermoBag": data.get("hasThermoBag"),
+            "courierLicense": data.get("courierLicense"),
+            
+            # Информация для грузовых
+            "loadCapacity": data.get("loadCapacity", ""),
+            "truckType": data.get("truckType"),
+            "cargoLicense": data.get("cargoLicense"),
+            
+            # Документы и опыт
+            "workExperience": data.get("workExperience"),
+            "previousPlatforms": data.get("previousPlatforms"),
+            "hasMedicalCert": data.get("hasMedicalCert"),
+            "documents": data.get("documents", []),
+            
+            # Согласия
+            "hasDocuments": data.get("hasDocuments", False),
+            "agreeTerms": data.get("agreeTerms", False),
+            "agreeMarketing": data.get("agreeMarketing", False),
+            
+            # Метаданные
             "status": "new",
             "created_at": datetime.now().isoformat(),
             "source": "signup_page"

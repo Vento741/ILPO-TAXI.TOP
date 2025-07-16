@@ -41,16 +41,65 @@ class ApplicationService:
                     logger.error(f"❌ Отсутствуют обязательные поля: full_name={full_name}, phone={phone}, age={age}, city={city}, category={category}")
                     return None
                 
-                # Создаем новую заявку
+                # Обрабатываем массивы из чекбоксов
+                delivery_types = application_data.get("deliveryType", [])
+                if isinstance(delivery_types, str):
+                    delivery_types = [delivery_types]
+                
+                available_documents = application_data.get("documents", [])
+                if isinstance(available_documents, str):
+                    available_documents = [available_documents]
+                
+                # Создаем новую заявку со всеми полями
                 new_application = Application(
+                    # Основная информация
                     full_name=full_name,
                     phone=phone,
                     age=int(age) if age else None,
                     city=city,
                     category=category,
+                    email=application_data.get("email"),
+                    
+                    # Новые основные поля
+                    citizenship=application_data.get("citizenship"),
+                    work_status=application_data.get("workStatus"),
+                    preferred_time=application_data.get("preferredTime"),
+                    work_schedule=application_data.get("workSchedule"),
+                    comments=application_data.get("comments"),
+                    
+                    # Информация для водителей
                     experience=application_data.get("experience"),
+                    has_driver_license=application_data.get("hasDriverLicense"),
+                    has_car=application_data.get("hasCar"),
+                    car_brand=application_data.get("carBrand"),
+                    car_model=application_data.get("carModel"),
+                    car_year=int(application_data.get("carYear")) if application_data.get("carYear") else None,
+                    car_class=application_data.get("carClass"),
+                    has_taxi_permit=application_data.get("hasTaxiPermit"),
+                    
+                    # Информация для курьеров
                     transport=application_data.get("transport"),
+                    delivery_types=delivery_types if delivery_types else None,
+                    has_thermo_bag=application_data.get("hasThermoBag"),
+                    courier_license=application_data.get("courierLicense"),
+                    
+                    # Информация для грузовых
                     load_capacity=application_data.get("loadCapacity"),
+                    truck_type=application_data.get("truckType"),
+                    cargo_license=application_data.get("cargoLicense"),
+                    
+                    # Документы и опыт
+                    work_experience=application_data.get("workExperience"),
+                    previous_platforms=application_data.get("previousPlatforms"),
+                    has_medical_cert=application_data.get("hasMedicalCert"),
+                    available_documents=available_documents if available_documents else None,
+                    
+                    # Согласия
+                    has_documents_confirmed=bool(application_data.get("hasDocuments")),
+                    agree_terms=bool(application_data.get("agreeTerms")),
+                    agree_marketing=bool(application_data.get("agreeMarketing")),
+                    
+                    # Дополнительная информация (для совместимости)
                     additional_info=self._format_additional_info(application_data),
                     status=ApplicationStatus.NEW
                 )
@@ -311,28 +360,97 @@ class ApplicationService:
                 if not application:
                     return
                 
-                # Формируем детальное сообщение
+                # Формируем максимально подробное сообщение
                 text = f"""
 🔔 **НОВАЯ ЗАЯВКА НАЗНАЧЕНА ВАМ!**
 
-📋 **Заявка #{application.id}**
-{self.get_category_text(application.category)}
+📋 **Заявка #{application.id}** | {self.get_category_text(application.category)}
 
-👤 **Основная информация:**
-• Имя: {application.full_name}
-• Телефон: {application.phone}
-• Возраст: {application.age if application.age else 'Не указан'} лет
-• Город: {application.city}
+👤 **ОСНОВНАЯ ИНФОРМАЦИЯ:**
+• **Имя:** {application.full_name}
+• **Телефон:** {application.phone}
+• **Возраст:** {application.age if application.age else 'Не указан'} лет
+• **Город:** {application.city}"""
 
-🚗 **Профессиональная информация:**
-"""
+                # Добавляем дополнительные основные поля
+                if application.email:
+                    text += f"\n• **Email:** {application.email}"
                 
-                # Добавляем специфичные поля в зависимости от категории
+                if application.citizenship:
+                    citizenship_map = {
+                        "rf": "🇷🇺 Гражданин РФ",
+                        "eaeu": "🌐 Гражданин ЕАЭС",
+                        "other": "🌍 Гражданин другой страны"
+                    }
+                    text += f"\n• **Гражданство:** {citizenship_map.get(application.citizenship, application.citizenship)}"
+                
+                if application.work_status:
+                    status_map = {
+                        "self_employed": "💼 Самозанятый (4-6% налог)",
+                        "park_self_employed": "🏢 Парковая самозанятость (+10 баллов приоритета)",
+                        "ip": "📊 ИП (УСН 6%)",
+                        "employee": "📝 Трудовой договор",
+                        "not_sure": "❓ Не определился (нужна консультация)"
+                    }
+                    text += f"\n• **Статус работы:** {status_map.get(application.work_status, application.work_status)}"
+
+                # Информация для водителей
                 if application.category in ['driver', 'both', 'cargo']:
+                    text += f"\n\n🚗 **ИНФОРМАЦИЯ О ВОДИТЕЛЕ:**"
+                    
                     if application.experience:
-                        text += f"• Стаж вождения: {application.experience} лет\n"
-                
+                        text += f"\n• **Стаж вождения:** {application.experience} лет"
+                    
+                    if application.has_driver_license:
+                        license_map = {
+                            "yes": "✅ Есть права категории B",
+                            "getting": "⏳ Получаю права в данный момент",
+                            "no": "❌ Нет прав"
+                        }
+                        text += f"\n• **Водительские права:** {license_map.get(application.has_driver_license, application.has_driver_license)}"
+                    
+                    if application.has_car:
+                        car_map = {
+                            "own": "🚗 Есть собственный автомобиль",
+                            "rent": "🔑 Планирую арендовать",
+                            "no": "❌ Нет автомобиля"
+                        }
+                        text += f"\n• **Автомобиль:** {car_map.get(application.has_car, application.has_car)}"
+                    
+                    # Детали автомобиля
+                    if application.car_brand or application.car_model:
+                        car_info = ""
+                        if application.car_brand:
+                            car_info += application.car_brand
+                        if application.car_model:
+                            car_info += f" {application.car_model}"
+                        if application.car_year:
+                            car_info += f" ({application.car_year} г.)"
+                        if car_info:
+                            text += f"\n• **Модель автомобиля:** {car_info}"
+                    
+                    if application.car_class:
+                        class_map = {
+                            "economy": "💰 Эконом (Lada, KIA Rio, Hyundai Solaris)",
+                            "comfort": "⭐ Комфорт (VW Polo, Skoda Rapid, KIA Cerato)",
+                            "comfort_plus": "⭐⭐ Комфорт+ (Toyota Camry, KIA Optima)",
+                            "business": "💎 Бизнес (BMW 5, Mercedes E, Audi A6)"
+                        }
+                        text += f"\n• **Желаемый класс:** {class_map.get(application.car_class, application.car_class)}"
+                    
+                    if application.has_taxi_permit:
+                        permit_map = {
+                            "yes": "✅ Есть разрешение на такси",
+                            "getting": "⏳ Оформляю разрешение",
+                            "no": "❌ Нет разрешения",
+                            "help_needed": "🆘 Нужна помощь в получении"
+                        }
+                        text += f"\n• **Разрешение такси:** {permit_map.get(application.has_taxi_permit, application.has_taxi_permit)}"
+
+                # Информация для курьеров
                 if application.category in ['courier', 'both']:
+                    text += f"\n\n📦 **ИНФОРМАЦИЯ О КУРЬЕРЕ:**"
+                    
                     if application.transport:
                         transport_map = {
                             "foot": "🚶 Пеший курьер",
@@ -341,32 +459,161 @@ class ApplicationService:
                             "motorcycle": "🏍️ Мотоцикл/скутер",
                             "car": "🚗 Автомобиль"
                         }
-                        text += f"• Транспорт: {transport_map.get(application.transport, application.transport)}\n"
-                
+                        text += f"\n• **Транспорт:** {transport_map.get(application.transport, application.transport)}"
+                    
+                    if application.delivery_types:
+                        delivery_map = {
+                            "yandex_food": "🍕 Яндекс.Еда",
+                            "yandex_delivery": "📦 Яндекс.Доставка",
+                            "yandex_lavka": "🛒 Яндекс.Лавка",
+                            "all": "🌟 Все категории"
+                        }
+                        delivery_list = [delivery_map.get(dt, dt) for dt in application.delivery_types]
+                        text += f"\n• **Категории доставки:** {', '.join(delivery_list)}"
+                    
+                    if application.has_thermo_bag:
+                        bag_map = {
+                            "yes": "✅ Есть термосумка",
+                            "buying": "🛒 Планирую купить",
+                            "rent": "🔑 Буду арендовать",
+                            "no": "❌ Нет термосумки"
+                        }
+                        text += f"\n• **Термосумка:** {bag_map.get(application.has_thermo_bag, application.has_thermo_bag)}"
+                    
+                    if application.courier_license:
+                        courier_license_map = {
+                            "yes": "✅ Есть права категории B",
+                            "motorcycle": "🏍️ Есть права категории A/A1",
+                            "no": "❌ Нет прав"
+                        }
+                        text += f"\n• **Права (для автокурьера):** {courier_license_map.get(application.courier_license, application.courier_license)}"
+
+                # Информация для грузовых
                 if application.category == 'cargo':
+                    text += f"\n\n🚛 **ГРУЗОВЫЕ ПЕРЕВОЗКИ:**"
+                    
                     if application.load_capacity:
-                        text += f"• Грузоподъемность: {application.load_capacity}\n"
+                        capacity_map = {
+                            "1.5": "📦 До 1,5 тонн (Газель)",
+                            "3": "📦📦 До 3 тонн",
+                            "5": "📦📦📦 До 5 тонн",
+                            "10": "🚚 До 10 тонн",
+                            "20": "🚛 До 20 тонн",
+                            "20+": "🚛🚛 Более 20 тонн"
+                        }
+                        text += f"\n• **Грузоподъемность:** {capacity_map.get(application.load_capacity, application.load_capacity)}"
+                    
+                    if application.truck_type:
+                        truck_map = {
+                            "tent": "🏕️ Тентованный",
+                            "closed": "📦 Закрытый",
+                            "refrigerator": "🧊 Рефрижератор",
+                            "platform": "🚛 Платформа",
+                            "dump": "🏗️ Самосвал"
+                        }
+                        text += f"\n• **Тип кузова:** {truck_map.get(application.truck_type, application.truck_type)}"
+                    
+                    if application.cargo_license:
+                        cargo_license_map = {
+                            "b": "🚗 Категория B (до 3,5т)",
+                            "c": "🚚 Категория C",
+                            "ce": "🚛 Категория CE",
+                            "no": "❌ Нет прав на грузовой"
+                        }
+                        text += f"\n• **Права на грузовой:** {cargo_license_map.get(application.cargo_license, application.cargo_license)}"
+
+                # Документы и опыт
+                text += f"\n\n📄 **ДОКУМЕНТЫ И ОПЫТ:**"
                 
-                text += f"\n📅 **Время подачи:** {application.created_at.strftime('%d.%m.%Y %H:%M')}\n"
+                if application.work_experience:
+                    exp_map = {
+                        "no_experience": "🆕 Нет опыта в такси/доставке",
+                        "less_year": "🥉 Менее года",
+                        "1_3_years": "🥈 1-3 года",
+                        "3_5_years": "🥇 3-5 лет",
+                        "more_5_years": "🏆 Более 5 лет"
+                    }
+                    text += f"\n• **Опыт работы:** {exp_map.get(application.work_experience, application.work_experience)}"
                 
-                # Добавляем дополнительную информацию если есть
-                if application.additional_info:
-                    # Ограничиваем длину дополнительной информации для первого сообщения
-                    additional_preview = application.additional_info[:200]
-                    if len(application.additional_info) > 200:
-                        additional_preview += "..."
-                    text += f"\n📝 **Дополнительная информация:**\n{additional_preview}\n"
+                if application.previous_platforms:
+                    text += f"\n• **Работал в:** {application.previous_platforms}"
                 
-                text += f"\n⚡ **Действия:**"
+                if application.has_medical_cert:
+                    med_map = {
+                        "yes": "✅ Есть действующая медсправка",
+                        "expired": "⚠️ Справка просрочена",
+                        "no": "❌ Нет справки",
+                        "help_needed": "🆘 Нужна помощь в получении"
+                    }
+                    text += f"\n• **Медсправка:** {med_map.get(application.has_medical_cert, application.has_medical_cert)}"
+                
+                if application.available_documents:
+                    doc_map = {
+                        "passport": "🆔 Паспорт",
+                        "driver_license": "🚗 Водительские права",
+                        "snils": "📄 СНИЛС",
+                        "inn": "📊 ИНН",
+                        "car_docs": "🚙 Документы на авто"
+                    }
+                    docs = [doc_map.get(doc, doc) for doc in application.available_documents]
+                    text += f"\n• **Имеющиеся документы:** {', '.join(docs)}"
+
+                # Предпочтения и график
+                text += f"\n\n⏰ **ПРЕДПОЧТЕНИЯ:**"
+                
+                if application.preferred_time:
+                    time_map = {
+                        "9-12": "🌅 09:00-12:00",
+                        "12-15": "☀️ 12:00-15:00",
+                        "15-18": "🌇 15:00-18:00",
+                        "18-21": "🌃 18:00-21:00",
+                        "any": "🕐 Любое время"
+                    }
+                    text += f"\n• **Время звонка:** {time_map.get(application.preferred_time, application.preferred_time)}"
+                
+                if application.work_schedule:
+                    schedule_map = {
+                        "full_time": "⏰ Полный день (8+ часов)",
+                        "part_time": "🕐 Неполный день (4-8 часов)",
+                        "weekends": "📅 Только выходные",
+                        "evenings": "🌃 Вечерние часы",
+                        "flexible": "🔄 Гибкий график"
+                    }
+                    text += f"\n• **График работы:** {schedule_map.get(application.work_schedule, application.work_schedule)}"
+
+                # Согласия
+                agreements = []
+                if application.has_documents_confirmed:
+                    agreements.append("✅ Документы")
+                if application.agree_terms:
+                    agreements.append("✅ Условия")
+                if application.agree_marketing:
+                    agreements.append("✅ Рассылка")
+                
+                if agreements:
+                    text += f"\n• **Согласия:** {', '.join(agreements)}"
+
+                # Комментарии
+                if application.comments:
+                    text += f"\n\n💬 **КОММЕНТАРИИ КЛИЕНТА:**\n_{application.comments}_"
+
+                # Метаданные
+                text += f"\n\n📅 **ВРЕМЯ ПОДАЧИ:** {application.created_at.strftime('%d.%m.%Y %H:%M')}"
+                
+                text += f"\n\n⚡ **ДЕЙСТВИЯ:**"
                 
                 keyboard = InlineKeyboardMarkup(inline_keyboard=[
                     [
-                        InlineKeyboardButton(text="📋 Подробно", callback_data=f"app_details_{application.id}"),
-                        InlineKeyboardButton(text="✅ Взять в работу", callback_data=f"app_take_{application.id}")
+                        InlineKeyboardButton(text="✅ Взять в работу", callback_data=f"app_take_{application.id}"),
+                        InlineKeyboardButton(text="📊 Подробности", callback_data=f"app_details_{application.id}")
                     ],
                     [
                         InlineKeyboardButton(text=f"📞 {application.phone}", callback_data=f"phone_{application.id}"),
                         InlineKeyboardButton(text="💬 WhatsApp", url=f"https://wa.me/{application.phone.replace('+', '').replace(' ', '').replace('(', '').replace(')', '').replace('-', '')}")
+                    ],
+                    [
+                        InlineKeyboardButton(text="📧 Email", callback_data=f"email_{application.id}") if application.email else InlineKeyboardButton(text="📝 Заметки", callback_data=f"notes_{application.id}"),
+                        InlineKeyboardButton(text="🔄 Статус", callback_data=f"status_{application.id}")
                     ]
                 ])
                 
@@ -377,10 +624,12 @@ class ApplicationService:
                     parse_mode="Markdown"
                 )
                 
-                logger.info(f"✅ Менеджер {manager_telegram_id} уведомлен о заявке #{application_id}")
+                logger.info(f"✅ Менеджер {manager_telegram_id} уведомлен о заявке #{application_id} (полная информация)")
                 
         except Exception as e:
             logger.error(f"❌ Ошибка уведомления менеджера: {e}")
+            import traceback
+            logger.error(f"Полная ошибка: {traceback.format_exc()}")
     
     async def get_pending_applications(self, limit: int = 10) -> List[Application]:
         """Получить список новых заявок"""
