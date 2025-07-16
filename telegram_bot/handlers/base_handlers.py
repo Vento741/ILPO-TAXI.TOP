@@ -714,19 +714,66 @@ async def callback_active_chats(callback: CallbackQuery):
             )
             return
         
-        text = f"💬 **Активные чаты ({len(active_chats)}/{manager.max_active_chats})**\n\n"
+        # Получаем детальную информацию о чатах из БД
+        from telegram_bot.models.database import AsyncSessionLocal
+        from telegram_bot.models.support_models import SupportChat
+        from sqlalchemy import select
+        from sqlalchemy.orm import selectinload
         
-        for chat_id in active_chats[:5]:  # Показываем первые 5
-            # Здесь можно добавить информацию о чате из Redis
-            text += f"🔸 Чат #{chat_id}\n"
+        chat_details = []
+        async with AsyncSessionLocal() as session:
+            for chat_id in active_chats[:10]:  # Показываем первые 10
+                result = await session.execute(
+                    select(SupportChat)
+                    .options(selectinload(SupportChat.manager))
+                    .where(SupportChat.chat_id == chat_id, SupportChat.is_active == True)
+                )
+                chat = result.scalar_one_or_none()
+                if chat:
+                    chat_details.append(chat)
         
-        if len(active_chats) > 5:
-            text += f"\n... и еще {len(active_chats) - 5} чатов"
+        text = f"💬 **Активные чаты ({len(chat_details)}/{manager.max_active_chats})**\n\n"
         
-        keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        keyboard_buttons = []
+        
+        if chat_details:
+            for i, chat in enumerate(chat_details[:5], 1):  # Показываем первые 5 с кнопками
+                client_name = chat.client_name or "Неизвестный"
+                phone = chat.client_phone[-4:] if chat.client_phone else "****"
+                time_str = chat.last_message_at.strftime('%H:%M') if chat.last_message_at else "—"
+                
+                text += f"🔸 **{i}. {client_name}** (***{phone})\n"
+                text += f"   💬 {chat.chat_id[:20]}...\n"
+                text += f"   🕐 Последнее сообщение: {time_str}\n\n"
+                
+                # Добавляем кнопку для каждого чата
+                keyboard_buttons.append([
+                    InlineKeyboardButton(
+                        text=f"💬 {i}. {client_name}", 
+                        callback_data=f"chat_details_{chat.id}"
+                    )
+                ])
+            
+            # Если есть еще чаты, показываем их без кнопок
+            for i, chat in enumerate(chat_details[5:], 6):
+                client_name = chat.client_name or "Неизвестный"
+                phone = chat.client_phone[-4:] if chat.client_phone else "****"
+                time_str = chat.last_message_at.strftime('%H:%M') if chat.last_message_at else "—"
+                
+                text += f"🔸 **{i}. {client_name}** (***{phone}) - {time_str}\n"
+            
+            if len(active_chats) > 10:
+                text += f"\n... и еще {len(active_chats) - 10} чатов"
+        else:
+            text += "У вас нет активных чатов."
+        
+        # Добавляем кнопки управления
+        keyboard_buttons.extend([
             [InlineKeyboardButton(text="🔄 Обновить", callback_data="active_chats")],
             [InlineKeyboardButton(text="◀️ Назад", callback_data="back_to_main")]
         ])
+        
+        keyboard = InlineKeyboardMarkup(inline_keyboard=keyboard_buttons)
         
         await callback.message.edit_text(text, reply_markup=keyboard)
     except Exception as e:
@@ -1164,10 +1211,6 @@ async def callback_accept_chat(callback: CallbackQuery, state: FSMContext):
             ],
             [
                 InlineKeyboardButton(
-                    text="📞 Позвонить", 
-                    url=f"tel:{support_chat.client_phone}" if support_chat.client_phone else "https://ilpo-taxi.top"
-                ),
-                InlineKeyboardButton(
                     text="🔚 Завершить", 
                     callback_data=f"close_chat_{chat_id}"
                 )
@@ -1325,6 +1368,30 @@ async def callback_close_chat(callback: CallbackQuery):
             
             await session.commit()
             
+            # Отправляем сообщение в веб-чат о завершении и переводе на ИИ
+            web_session_id = support_chat.chat_metadata.get("web_session_id") if support_chat.chat_metadata else None
+            
+            if web_session_id:
+                from routers.chat_routes import manager as connection_manager
+                
+                return_to_ai_message = {
+                    "type": "system_message",
+                    "content": f"🔚 Чат с менеджером {manager.first_name} завершен.\n\n"
+                              "🤖 Теперь с вами снова общается ИИ-консультант ILPO-TAXI. "
+                              "Могу ответить на дополнительные вопросы или помочь с оформлением заявки.",
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "chat_status": "ai_mode"
+                }
+                
+                try:
+                    await connection_manager.send_to_session(
+                        web_session_id, 
+                        json.dumps(return_to_ai_message, ensure_ascii=False)
+                    )
+                    logger.info(f"✅ Клиент уведомлен о завершении чата и возврате к ИИ")
+                except Exception as ws_error:
+                    logger.error(f"❌ Ошибка отправки уведомления о завершении чата: {ws_error}")
+            
             # Удаляем из активных чатов менеджера
             await redis_service.remove_manager_active_chat(
                 str(telegram_id), 
@@ -1431,7 +1498,6 @@ async def send_manager_message_to_webchat(chat_id: int, message_text: str, manag
             await session.commit()
             
             # Отправляем через WebSocket (если есть подключение)
-            # Здесь должна быть интеграция с WebSocket менеджером
             web_session_id = support_chat.chat_metadata.get("web_session_id") if support_chat.chat_metadata else None
             
             if web_session_id:
@@ -1446,10 +1512,16 @@ async def send_manager_message_to_webchat(chat_id: int, message_text: str, manag
                     "chat_id": support_chat.chat_id
                 }
                 
-                await connection_manager.send_to_session(
-                    web_session_id, 
-                    json.dumps(message_data, ensure_ascii=False)
-                )
+                try:
+                    await connection_manager.send_to_session(
+                        web_session_id, 
+                        json.dumps(message_data, ensure_ascii=False)
+                    )
+                    logger.info(f"✅ Сообщение менеджера отправлено в веб-чат для сессии {web_session_id}")
+                except Exception as ws_error:
+                    logger.error(f"❌ Ошибка отправки через WebSocket: {ws_error}")
+            else:
+                logger.warning(f"⚠️ Не найден web_session_id для чата {support_chat.chat_id}")
             
             logger.info(f"✅ Сообщение менеджера отправлено в веб-чат {support_chat.chat_id}")
             return True
@@ -1474,7 +1546,10 @@ def get_manager_main_keyboard(is_admin: bool = False, manager_status: str = "off
     # Основные функции для всех менеджеров
     buttons.extend([
         [InlineKeyboardButton(text="📋 Управление заявками", callback_data="applications_menu")],
-        [InlineKeyboardButton(text="📊 Статистика", callback_data="show_stats")]
+        [
+            InlineKeyboardButton(text="💬 Активные чаты", callback_data="active_chats"),
+            InlineKeyboardButton(text="📊 Статистика", callback_data="show_stats")
+        ]
     ])
     
     # Дополнительная кнопка для админов

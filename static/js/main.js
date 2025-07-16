@@ -303,6 +303,13 @@ function handleWebSocketMessage(data) {
             addMessage(data.content, 'system', {
                 timestamp: data.timestamp
             });
+
+            // Проверяем статус чата для возврата к ИИ
+            if (data.chat_status === 'ai_mode') {
+                updateChatStatus('ai', 'ИИ-консультант');
+                // Показываем кнопку переключения на менеджера снова
+                showTransferToManagerButton();
+            }
             break;
 
         case 'typing':
@@ -1875,5 +1882,31 @@ function updateChatStatus(status, managerName = 'ИИ-Консультант') {
     } else {
         if (chatHeader) chatHeader.textContent = 'ИИ-Консультант';
         if (chatStatus) chatStatus.textContent = 'Онлайн';
+    }
+}
+
+// Показать кнопку переключения на менеджера
+function showTransferToManagerButton() {
+    // Проверяем, есть ли уже кнопка
+    let transferBtn = document.getElementById('transferToManagerBtn');
+
+    if (!transferBtn) {
+        // Создаем кнопку заново
+        transferBtn = document.createElement('button');
+        transferBtn.id = 'transferToManagerBtn';
+        transferBtn.className = 'btn btn-outline-primary btn-sm mt-2';
+        transferBtn.innerHTML = '👤 Связаться с живым менеджером';
+        transferBtn.onclick = requestManagerTransfer;
+
+        // Добавляем кнопку в чат
+        const chatInput = document.querySelector('.chat-input');
+        if (chatInput) {
+            chatInput.appendChild(transferBtn);
+        }
+    } else {
+        // Если кнопка уже есть, просто показываем её
+        transferBtn.style.display = 'block';
+        transferBtn.disabled = false;
+        transferBtn.innerHTML = '👤 Связаться с живым менеджером';
     }
 }
