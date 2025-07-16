@@ -1440,6 +1440,8 @@ async def handle_manager_reply(message: Message, state: FSMContext):
         data = await state.get_data()
         chat_id = data.get("active_web_chat_id")
         
+        logger.info(f"📨 Менеджер {telegram_id} отправляет сообщение в чат {chat_id}: '{message.text[:50]}{'...' if len(message.text) > 50 else ''}'")
+        
         if not chat_id:
             await message.reply("❌ Активный чат не найден. Используйте кнопки для выбора чата.")
             return
@@ -1453,8 +1455,10 @@ async def handle_manager_reply(message: Message, state: FSMContext):
         
         if success:
             await message.reply("✅ Сообщение отправлено клиенту в веб-чат")
+            logger.info(f"✅ Менеджер {telegram_id} успешно отправил сообщение в чат {chat_id}")
         else:
             await message.reply("❌ Не удалось отправить сообщение. Возможно, клиент отключился.")
+            logger.warning(f"❌ Менеджер {telegram_id} не смог отправить сообщение в чат {chat_id}")
         
         # Очищаем состояние
         await state.update_data(active_web_chat_id=None)
@@ -1500,9 +1504,17 @@ async def send_manager_message_to_webchat(chat_id: int, message_text: str, manag
             # Отправляем через WebSocket (если есть подключение)
             web_session_id = support_chat.chat_metadata.get("web_session_id") if support_chat.chat_metadata else None
             
+            logger.info(f"🔍 Отправка сообщения в веб-чат: chat_id={support_chat.chat_id}, web_session_id={web_session_id}")
+            
             if web_session_id:
                 # Импортируем менеджер соединений из chat_routes
                 from routers.chat_routes import manager as connection_manager
+                
+                # Проверяем активные соединения в менеджере
+                active_connections_count = len(connection_manager.active_connections)
+                has_session_connection = web_session_id in connection_manager.active_connections
+                
+                logger.info(f"🔍 WebSocket статус: активных соединений={active_connections_count}, сессия {web_session_id} подключена={has_session_connection}")
                 
                 message_data = {
                     "type": "manager_message",
@@ -1513,17 +1525,22 @@ async def send_manager_message_to_webchat(chat_id: int, message_text: str, manag
                 }
                 
                 try:
-                    await connection_manager.send_to_session(
-                        web_session_id, 
-                        json.dumps(message_data, ensure_ascii=False)
-                    )
-                    logger.info(f"✅ Сообщение менеджера отправлено в веб-чат для сессии {web_session_id}")
+                    if has_session_connection:
+                        await connection_manager.send_to_session(
+                            web_session_id, 
+                            json.dumps(message_data, ensure_ascii=False)
+                        )
+                        logger.info(f"✅ Сообщение менеджера отправлено в веб-чат для сессии {web_session_id}")
+                    else:
+                        logger.warning(f"⚠️ WebSocket соединение для сессии {web_session_id} не найдено")
+                        return False
                 except Exception as ws_error:
                     logger.error(f"❌ Ошибка отправки через WebSocket: {ws_error}")
+                    return False
             else:
                 logger.warning(f"⚠️ Не найден web_session_id для чата {support_chat.chat_id}")
+                return False
             
-            logger.info(f"✅ Сообщение менеджера отправлено в веб-чат {support_chat.chat_id}")
             return True
             
     except Exception as e:
