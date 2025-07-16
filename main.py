@@ -3,6 +3,11 @@
 Главный файл приложения с подключением роутеров и OpenRouter API интеграцией
 """
 
+from dotenv import load_dotenv
+
+# Загружаем переменные окружения
+load_dotenv()
+
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -10,10 +15,6 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 from datetime import datetime
 import os
-from dotenv import load_dotenv
-
-# Загружаем переменные окружения
-load_dotenv()
 
 # Импортируем роутеры
 from routers.main_routes import main_router
