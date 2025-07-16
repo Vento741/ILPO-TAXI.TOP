@@ -223,11 +223,18 @@ class ManagerService:
                 if not manager:
                     return []
                 
-                # Строим запрос
-                query = select(Application).where(Application.assigned_manager_id == manager.id)
-                
-                if status:
-                    query = query.where(Application.status == status)
+                # Если запрашиваются новые заявки - показываем неназначенные NEW заявки
+                if status == ApplicationStatus.NEW:
+                    query = select(Application).where(
+                        Application.status == ApplicationStatus.NEW,
+                        Application.assigned_manager_id.is_(None)
+                    )
+                else:
+                    # Для остальных статусов - только назначенные этому менеджеру
+                    query = select(Application).where(Application.assigned_manager_id == manager.id)
+                    
+                    if status:
+                        query = query.where(Application.status == status)
                 
                 query = query.order_by(desc(Application.created_at)).limit(limit)
                 
@@ -236,6 +243,22 @@ class ManagerService:
                 
             except Exception as e:
                 logger.error(f"❌ Ошибка получения заявок менеджера: {e}")
+                return []
+
+    async def get_available_new_applications(self, limit: int = 10) -> List[Application]:
+        """Получить доступные новые заявки (неназначенные)"""
+        async with AsyncSessionLocal() as session:
+            try:
+                query = select(Application).where(
+                    Application.status == ApplicationStatus.NEW,
+                    Application.assigned_manager_id.is_(None)
+                ).order_by(desc(Application.created_at)).limit(limit)
+                
+                result = await session.execute(query)
+                return result.scalars().all()
+                
+            except Exception as e:
+                logger.error(f"❌ Ошибка получения новых заявок: {e}")
                 return []
     
     async def start_work_session(self, telegram_id: int) -> bool:

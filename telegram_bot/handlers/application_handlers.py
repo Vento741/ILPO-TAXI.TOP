@@ -36,7 +36,7 @@ async def cmd_applications(message: Message):
             await message.answer("❌ Вы не зарегистрированы как менеджер.")
             return
         
-        # Получаем заявки менеджера
+        # Получаем все заявки менеджера (без фильтра по статусу)
         applications = await manager_service.get_manager_applications(telegram_id, limit=10)
         
         if not applications:
@@ -79,12 +79,8 @@ async def callback_new_applications(callback: CallbackQuery):
             await callback.answer("❌ Вы не зарегистрированы как менеджер.")
             return
         
-        # Получаем новые заявки (статус NEW)
-        applications = await manager_service.get_manager_applications(
-            telegram_id, 
-            status=ApplicationStatus.NEW, 
-            limit=5
-        )
+        # Получаем новые неназначенные заявки
+        applications = await manager_service.get_available_new_applications(limit=5)
         
         if not applications:
             await callback.message.edit_text(
@@ -334,11 +330,7 @@ async def callback_next_application(callback: CallbackQuery):
             return
         
         # Получаем следующую новую заявку
-        applications = await manager_service.get_manager_applications(
-            telegram_id, 
-            status=ApplicationStatus.NEW, 
-            limit=5
-        )
+        applications = await manager_service.get_available_new_applications(limit=5)
         
         if not applications:
             await callback.answer("📋 Больше нет новых заявок")

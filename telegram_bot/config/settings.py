@@ -51,7 +51,7 @@ class Settings(BaseSettings):
     MANAGER_RESPONSE_TIME_LIMIT: int = 300  # 5 минут
     
     # Notifications
-    NOTIFICATION_CHAT_ID: int = 0  # ID чата для уведомлений админов
+    NOTIFICATION_CHAT_ID: int = int(os.getenv("NOTIFICATION_CHAT_ID", "0"))
 
     @property
     def ADMIN_IDS(self) -> List[int]:
