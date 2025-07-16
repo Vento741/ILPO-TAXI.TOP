@@ -493,15 +493,30 @@ async def callback_all_applications(callback: CallbackQuery):
 @application_router.callback_query(F.data == "applications_menu")
 async def callback_applications_menu(callback: CallbackQuery):
     """Показать меню заявок"""
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+    telegram_id = callback.from_user.id
+    manager = await manager_service.get_manager_by_telegram_id(telegram_id)
+    
+    if not manager:
+        await callback.answer("❌ Вы не зарегистрированы как менеджер.", show_alert=True)
+        return
+        
+    keyboard_buttons = [
         [InlineKeyboardButton(text="📋 Мои заявки", callback_data="my_applications")],
-        [InlineKeyboardButton(text="📋 Новые заявки", callback_data="new_applications")],
-        [InlineKeyboardButton(text="📋 Назначенные", callback_data="assigned_applications")],
+        [InlineKeyboardButton(text="🆕 Новые заявки", callback_data="new_applications")],
         [InlineKeyboardButton(text="⚙️ В работе", callback_data="in_progress_applications")],
         [InlineKeyboardButton(text="✅ Завершенные", callback_data="completed_applications")],
-        [InlineKeyboardButton(text="🗂️ Все заявки", callback_data="all_applications")],
+    ]
+    
+    if manager.is_admin:
+        keyboard_buttons.append(
+            [InlineKeyboardButton(text="🗂️ Все заявки (Админ)", callback_data="all_applications")]
+        )
+    
+    keyboard_buttons.append(
         [InlineKeyboardButton(text="◀️ Назад", callback_data="back_to_main")]
-    ])
+    )
+    
+    keyboard = InlineKeyboardMarkup(inline_keyboard=keyboard_buttons)
     
     try:
         await callback.message.edit_text(
@@ -512,7 +527,7 @@ async def callback_applications_menu(callback: CallbackQuery):
         )
     except Exception as e:
         if "message is not modified" in str(e):
-            await callback.answer("✅ Меню заявок актуально", parse_mode=ParseMode.HTML)
+            await callback.answer("✅ Меню заявок актуально")
         else:
             logger.error(f"❌ Ошибка отображения меню заявок: {e}")
             await callback.answer("❌ Произошла ошибка.", show_alert=True)

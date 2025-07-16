@@ -254,25 +254,33 @@ class ManagerService:
                             )
                         )
                     )
+                elif show_all and manager.is_admin:
+                    query = select(Application).order_by(desc(Application.created_at))
+                    if status:
+                        if status == ApplicationStatus.IN_PROGRESS:
+                            query = query.where(Application.status.in_([
+                                ApplicationStatus.ASSIGNED,
+                                ApplicationStatus.IN_PROGRESS
+                            ]))
+                        else:
+                            query = query.where(Application.status == status)
                 else:
-                    # Для просмотра всех заявок или если менеджер является админом
-                    if show_all or manager.is_admin:
-                        query = select(Application)
-                        if status:
+                    # Заявки конкретного менеджера
+                    query = select(Application).where(
+                        Application.assigned_manager_id == manager.id
+                    ).order_by(desc(Application.created_at))
+                    if status:
+                        if status == ApplicationStatus.IN_PROGRESS:
+                            # "В работе" включает назначенные и те, что уже в процессе
+                            query = query.where(Application.status.in_([
+                                ApplicationStatus.ASSIGNED,
+                                ApplicationStatus.IN_PROGRESS
+                            ]))
+                        else:
                             query = query.where(Application.status == status)
-                    else:
-                        # Для обычных менеджеров - только назначенные им заявки
-                        query = select(Application).where(Application.assigned_manager_id == manager.id)
-                        if status:
-                            query = query.where(Application.status == status)
-                
-                # Добавляем сортировку, смещение и лимит
-                query = query.order_by(desc(Application.created_at))
-                
-                # Применяем пагинацию
-                if offset > 0:
-                    query = query.offset(offset)
-                query = query.limit(limit)
+
+                # Добавляем пагинацию
+                query = query.limit(limit).offset(offset)
                 
                 result = await session.execute(query)
                 return result.scalars().all()
