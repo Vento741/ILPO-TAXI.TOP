@@ -307,23 +307,6 @@ async def callback_application_action(callback: CallbackQuery):
             else:
                 await callback.answer("❌ Не удалось взять заявку. Возможно, её уже взял другой менеджер.", show_alert=True)
         
-        elif action == "details":
-            # Показать детали заявки
-            async with AsyncSessionLocal() as session:
-                result = await session.execute(
-                    select(Application)
-                    .options(selectinload(Application.assigned_manager))
-                    .where(Application.id == app_id)
-                )
-                application = result.scalars().first()
-                
-                if application:
-                    text = format_application_details(application)
-                    keyboard = get_application_detail_keyboard(app_id, False)
-                    await callback.message.edit_text(text, reply_markup=keyboard, parse_mode=ParseMode.HTML)
-                else:
-                    await callback.answer("❌ Заявка не найдена.", show_alert=True)
-        
         elif action == "complete":
             # Завершить заявку
             async with AsyncSessionLocal() as session:
@@ -341,31 +324,6 @@ async def callback_application_action(callback: CallbackQuery):
                     await callback.answer("✅ Заявка завершена!")
                 else:
                     await callback.answer("❌ Заявка не найдена или не назначена вам.", show_alert=True)
-        
-        elif action == "contact":
-            # Связаться с клиентом
-            async with AsyncSessionLocal() as session:
-                application = await session.get(Application, app_id)
-                
-                if application:
-                    contact_text = f"""
-📞 <b>Контакты клиента:</b>
-
-👤 <b>Имя:</b> {application.full_name}
-📱 <b>Телефон:</b> {application.phone}
-🏙️ <b>Город:</b> {application.city}
-
-Вы можете позвонить клиенту или написать в WhatsApp/Telegram.
-                    """
-                    
-                    keyboard = InlineKeyboardMarkup(inline_keyboard=[
-                        [InlineKeyboardButton(text=f"📞 {application.phone}", callback_data=f"phone_{application.id}")],
-                        [InlineKeyboardButton(text="◀️ Назад к заявке", callback_data=f"app_details_{app_id}")]
-                    ])
-                    
-                    await callback.message.edit_text(contact_text, reply_markup=keyboard, parse_mode=ParseMode.HTML)
-                else:
-                    await callback.answer("❌ Заявка не найдена.", show_alert=True)
     
     except Exception as e:
         logger.error(f"❌ Ошибка обработки действия с заявкой: {e}")
