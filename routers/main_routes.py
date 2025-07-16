@@ -131,7 +131,8 @@ async def signup_application(request: Request):
             from telegram_bot.services.application_service import handle_new_application_from_site
             
             # Обрабатываем заявку через Telegram бот (передаем исходные данные формы)
-            bot_success = await handle_new_application_from_site(data)
+            # Передаем уже обработанные и приведённые к нужным типам данные
+            bot_success = await handle_new_application_from_site(application_data)
             
             if bot_success:
                 print(f"✅ Заявка успешно отправлена менеджерам через Telegram бот")
