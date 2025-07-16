@@ -237,6 +237,32 @@ class ManagerService:
             except Exception as e:
                 logger.error(f"❌ Ошибка получения заявок менеджера: {e}")
                 return []
+
+    async def get_available_applications(
+        self, 
+        status: ApplicationStatus = ApplicationStatus.NEW,
+        limit: int = 10
+    ) -> List[Application]:
+        """Получить доступные (неназначенные) заявки"""
+        async with AsyncSessionLocal() as session:
+            try:
+                # Строим запрос для поиска неназначенных заявок
+                query = select(Application).where(
+                    and_(
+                        Application.status == status,
+                        Application.assigned_manager_id.is_(None)
+                    )
+                ).order_by(desc(Application.created_at)).limit(limit)
+                
+                result = await session.execute(query)
+                applications = result.scalars().all()
+                
+                logger.info(f"🔍 Найдено {len(applications)} доступных заявок со статусом {status.value}")
+                return applications
+                
+            except Exception as e:
+                logger.error(f"❌ Ошибка получения доступных заявок: {e}")
+                return []
     
     async def start_work_session(self, telegram_id: int) -> bool:
         """Начать рабочую сессию менеджера"""

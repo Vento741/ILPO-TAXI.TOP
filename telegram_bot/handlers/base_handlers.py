@@ -1063,11 +1063,11 @@ async def callback_all_applications(callback: CallbackQuery):
             await callback.answer("❌ У вас нет прав администратора.")
             return
         
-        # Импортируем application_service для получения заявок
-        from telegram_bot.services.application_service import application_service
-        
-        # Получаем новые заявки
-        pending_applications = await application_service.get_pending_applications(limit=20)
+        # Получаем все новые заявки через manager_service
+        pending_applications = await manager_service.get_available_applications(
+            status=ApplicationStatus.NEW,
+            limit=20
+        )
         
         if not pending_applications:
             await callback.message.edit_text(
