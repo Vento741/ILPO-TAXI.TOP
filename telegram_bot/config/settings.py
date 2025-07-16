@@ -39,6 +39,7 @@ class Settings(BaseSettings):
     
     # FastAPI Integration
     FASTAPI_URL: str = os.getenv("FASTAPI_URL", "http://localhost:8000")
+    API_PORT: int = int(os.getenv("API_PORT", "8000"))
     API_SECRET_KEY: str = os.getenv("API_SECRET_KEY", "your-secret-key")
     
         # Admin Users (Telegram IDs) - строки, будут парситься в списки
