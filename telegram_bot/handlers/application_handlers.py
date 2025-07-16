@@ -573,58 +573,108 @@ async def callback_refresh_by_status(callback: CallbackQuery):
 
 def format_application_details(application: Application) -> str:
     """Форматирование детальной информации о заявке с использованием HTML."""
-    
+
     def h(text: Optional[str]) -> str:
         """Экранирует HTML-теги для безопасного отображения."""
         if text is None:
             return ""
         return html.escape(str(text))
 
-    # --- Словари для перевода ---
-    citizenship_map = {"rf": "🇷🇺 Гражданин РФ", "eaeu": "🇪🇺 Гражданин ЕАЭС", "other": "🌍 Другое"}
+    # --- Обновленные и унифицированные словари для перевода ---
+    citizenship_map = {
+        "rf": "🇷🇺 Гражданин РФ",
+        "eaeu": "🌐 Гражданин ЕАЭС",
+        "other": "🌍 Гражданин другой страны"
+    }
     work_status_map = {
-        "self_employed": "Самозанятый", "park_self_employed": "Парковая самозанятость",
-        "ip": "ИП (УСН 6%)", "employee": "Трудовой договор", "not_sure": "Не определился"
+        "self_employed": "💼 Самозанятый (4-6% налог)",
+        "park_self_employed": "🏢 Парковая самозанятость (+10 баллов приоритета)",
+        "ip": "📊 ИП (УСН 6%)",
+        "employee": "📝 Трудовой договор",
+        "not_sure": "❓ Не определился (нужна консультация)"
     }
-    schedule_map = {"full_time": "Полный день", "part_time": "Неполный день", "flexible": "Гибкий график"}
-    license_map = {"yes": "✅ Есть", "getting": "⏳ В процессе получения", "no": "❌ Нет"}
-    car_map = {"own": "🚗 Собственный", "rent": "Аренда", "provided": "Предоставят", "no": "❌ Нет"}
+    schedule_map = {
+        "full_time": "⏰ Полный день (8+ часов)",
+        "part_time": "🕐 Неполный день (4-8 часов)",
+        "weekends": "📅 Только выходные",
+        "evenings": "🌃 Вечерние часы",
+        "flexible": "🔄 Гибкий график"
+    }
+    license_map = {
+        "yes": "✅ Есть",
+        "getting": "⏳ В процессе получения",
+        "no": "❌ Нет"
+    }
+    car_map = {
+        "own": "🚗 Собственный",
+        "rent": "🔑 Аренда",
+        "no": "❌ Нет"
+    }
     car_class_map = {
-        "economy": "Эконом", "comfort": "Комфорт", "comfort_plus": "Комфорт+",
-        "business": "Бизнес"
+        "economy": "💰 Эконом (Lada, KIA Rio, Hyundai Solaris)",
+        "comfort": "⭐ Комфорт (VW Polo, Skoda Rapid, KIA Cerato)",
+        "comfort_plus": "⭐⭐ Комфорт+ (Toyota Camry, KIA Optima)",
+        "business": "💎 Бизнес (BMW 5, Mercedes E, Audi A6)"
     }
-    permit_map = {"yes": "✅ Есть", "no": "❌ Нет", "help_needed": "ℹ️ Нужна помощь"}
-    experience_map = {"no": "Нет опыта", "less_year": "Менее года", "1_3_years": "1-3 года", "3_plus_years": "Более 3 лет"}
-    docs_map = {
-        "passport": "Паспорт", "driver_license": "Вод. удостоверение", "snils": "СНИЛС",
-        "inn": "ИНН", "car_docs": "Документы на авто", "medical_cert": "Мед. справка",
-        "work_permit": "Разрешение на работу"
+    permit_map = {
+        "yes": "✅ Есть разрешение на такси",
+        "getting": "⏳ Оформляю разрешение",
+        "no": "❌ Нет разрешения",
+        "help_needed": "🆘 Нужна помощь в получении"
+    }
+    experience_map = {
+        "no_experience": "🆕 Нет опыта в такси/доставке",
+        "less_year": "🥉 Менее года",
+        "1_3_years": "🥈 1-3 года",
+        "3_5_years": "🥇 3-5 лет",
+        "more_5_years": "🏆 Более 5 лет"
+    }
+    doc_map = {
+        "passport": "🆔 Паспорт",
+        "driver_license": "🚗 Вод. удостоверение",
+        "snils": "📄 СНИЛС",
+        "inn": "📊 ИНН",
+        "car_docs": "🚙 Документы на авто",
+        "medical_cert": "🩺 Мед. справка",
+        "work_permit": "🛂 Разрешение на работу"
     }
     status_map = {
         "new": "🆕 Новая", "assigned": "👤 Назначена", "in_progress": "⚙️ В работе",
         "waiting_client": "⏳ Ожидание клиента", "completed": "✅ Завершена", "cancelled": "❌ Отменена"
-            }
+    }
+    transport_map = {
+        "foot": "🚶 Пеший курьер", "bike": "🚴 Велосипед", "scooter": "🛴 Электросамокат",
+        "motorcycle": "🏍️ Мотоцикл/скутер", "car": "🚗 Автомобиль"
+    }
+    thermo_bag_map = {
+        "yes": "✅ Есть термосумка", "buying": "🛒 Планирую купить",
+        "rent": "🔑 Буду арендовать", "no": "❌ Нет термосумки"
+    }
+    time_map = {
+        "9-12": "🌅 09:00-12:00", "12-15": "☀️ 12:00-15:00",
+        "15-18": "🌇 15:00-18:00", "18-21": "🌃 18:00-21:00",
+        "any": "🕐 Любое время"
+    }
+    med_cert_map = {
+        "yes": "✅ Есть действующая", "expired": "⚠️ Просрочена",
+        "no": "❌ Нет", "help_needed": "🆘 Нужна помощь"
+    }
 
     def format_bool(value: Optional[bool]) -> str:
-        """Форматирует булево значение в Да/Нет."""
-        if value is None:
-            return "Не указано"
+        if value is None: return "Не указано"
         return "✅ Да" if value else "❌ Нет"
-        
+
     def format_list(items: Optional[list], item_map: dict) -> str:
-        """Форматирует список, переводя его элементы по словарю."""
-        if not items:
-            return "Не указано"
+        if not items: return "Не указано"
         return ", ".join([item_map.get(item, h(item)) for item in items])
 
     status_emoji = get_status_emoji(application.status)
     category_text = get_category_text(application.category)
     
     text = f"{status_emoji} <b>Заявка #{application.id}</b>\n\n"
-    text += f"🚗 <b>Категория:</b> {h(category_text)}\n"
     
     # --- Основная информация ---
-    text += f"\n👤 <b>Основная информация:</b>\n"
+    text += "👤 <b>ОСНОВНАЯ ИНФОРМАЦИЯ:</b>\n"
     text += f"  • <b>Имя:</b> {h(application.full_name)}\n"
     text += f"  • <b>Телефон:</b> <code>{h(application.phone)}</code>\n"
     if application.email:
@@ -634,77 +684,67 @@ def format_application_details(application: Application) -> str:
         text += f"  • <b>Возраст:</b> {h(str(application.age))} лет\n"
     if application.citizenship:
         text += f"  • <b>Гражданство:</b> {citizenship_map.get(application.citizenship, h(application.citizenship))}\n"
-    
-    # --- Рабочие предпочтения ---
-    work_prefs = []
-    if application.work_status:
-        work_prefs.append(f"  • <b>Статус:</b> {work_status_map.get(application.work_status, h(application.work_status))}")
-    if application.work_schedule:
-        work_prefs.append(f"  • <b>График:</b> {schedule_map.get(application.work_schedule, h(application.work_schedule))}")
-    if application.preferred_time:
-        work_prefs.append(f"  • <b>Время для звонка:</b> {h(application.preferred_time)}")
-    if work_prefs:
-        text += "\n🗓 <b>Рабочие предпочтения:</b>\n" + "\n".join(work_prefs) + "\n"
-    
-    # --- Информация по категориям ---
-    category_info = []
-    # --- Водитель ---
-    if application.category in ['driver', 'both']:
-        if application.experience:
-            category_info.append(f"  • <b>Стаж:</b> {h(application.experience)} лет") # experience уже приходит как строка "35"
-    if application.has_driver_license:
-            category_info.append(f"  • <b>Права:</b> {license_map.get(application.has_driver_license, h(application.has_driver_license))}")
-    if application.has_car:
-            category_info.append(f"  • <b>Свой авто:</b> {car_map.get(application.has_car, h(application.has_car))}")
-    if application.car_brand and application.car_model:
-            car_year = f" ({application.car_year} г.)" if application.car_year else ""
-            category_info.append(f"  • <b>Автомобиль:</b> {h(application.car_brand)} {h(application.car_model)}{h(car_year)}")
-    if application.car_class:
-            category_info.append(f"  • <b>Желаемый класс:</b> {car_class_map.get(application.car_class, h(application.car_class))}")
-    if application.has_taxi_permit:
-            category_info.append(f"  • <b>Разрешение такси:</b> {permit_map.get(application.has_taxi_permit, h(application.has_taxi_permit))}")
 
-    # --- Курьер ---
+    # --- Рабочие предпочтения ---
+    text += "\n🗓 <b>РАБОЧИЕ ПРЕДПОЧТЕНИЯ:</b>\n"
+    if application.work_status:
+        text += f"  • <b>Статус:</b> {work_status_map.get(application.work_status, h(application.work_status))}\n"
+    if application.work_schedule:
+        text += f"  • <b>График:</b> {schedule_map.get(application.work_schedule, h(application.work_schedule))}\n"
+    if application.preferred_time:
+        text += f"  • <b>Время для звонка:</b> {time_map.get(application.preferred_time, h(application.preferred_time))}\n"
+
+    # --- Информация для водителей ---
+    if application.category in ['driver', 'both', 'cargo']:
+        text += f"\n🚗 <b>ИНФОРМАЦИЯ О ВОДИТЕЛЕ:</b>\n"
+        if application.experience:
+            text += f"  • <b>Стаж вождения:</b> {h(application.experience)} лет\n"
+        if application.has_driver_license:
+            text += f"  • <b>Права:</b> {license_map.get(application.has_driver_license, h(application.has_driver_license))}\n"
+        if application.has_car:
+            text += f"  • <b>Свой авто:</b> {car_map.get(application.has_car, h(application.has_car))}\n"
+        if application.car_brand and application.car_model:
+            car_year = f" ({application.car_year} г.)" if application.car_year else ""
+            text += f"  • <b>Автомобиль:</b> {h(application.car_brand)} {h(application.car_model)}{h(car_year)}\n"
+        if application.car_class:
+            text += f"  • <b>Желаемый класс:</b> {car_class_map.get(application.car_class, h(application.car_class))}\n"
+        if application.has_taxi_permit:
+            text += f"  • <b>Разрешение такси:</b> {permit_map.get(application.has_taxi_permit, h(application.has_taxi_permit))}\n"
+
+    # --- Информация для курьеров ---
     if application.category in ['courier', 'both']:
+        text += f"\n📦 <b>ИНФОРМАЦИЯ О КУРЬЕРЕ:</b>\n"
         if application.transport:
-            transport_map = {
-                "foot": "🚶 Пеший", "bike": "🚴 Вело", "scooter": "🛴 Самокат",
-                "motorcycle": "🏍️ Мото", "car": "🚗 Авто"
-            }
-            category_info.append(f"  • <b>Транспорт:</b> {transport_map.get(application.transport, h(application.transport))}")
+            text += f"  • <b>Транспорт:</b> {transport_map.get(application.transport, h(application.transport))}\n"
         if application.has_thermo_bag:
-            category_info.append(f"  • <b>Термосумка:</b> {permit_map.get(application.has_thermo_bag, h(application.has_thermo_bag))}")
+            text += f"  • <b>Термосумка:</b> {thermo_bag_map.get(application.has_thermo_bag, h(application.has_thermo_bag))}\n"
         if application.courier_license:
-             category_info.append(f"  • <b>Права (курьер):</b> {license_map.get(application.courier_license, h(application.courier_license))}")
+             text += f"  • <b>Права (курьер):</b> {license_map.get(application.courier_license, h(application.courier_license))}\n"
     
-    # --- Грузовой ---
+    # --- Информация для грузовых ---
     if application.category == 'cargo':
+        text += f"\n🚛 <b>ГРУЗОВЫЕ ПЕРЕВОЗКИ:</b>\n"
         if application.load_capacity:
-            category_info.append(f"  • <b>Грузоподъемность:</b> {h(application.load_capacity)}")
+            text += f"  • <b>Грузоподъемность:</b> {h(application.load_capacity)}\n"
         if application.truck_type:
-            category_info.append(f"  • <b>Тип кузова:</b> {h(application.truck_type)}")
+            text += f"  • <b>Тип кузова:</b> {h(application.truck_type)}\n"
         if application.cargo_license:
-            category_info.append(f"  • <b>Права (грузовые):</b> {h(application.cargo_license)}")
-            
-    if category_info:
-        text += f"\n💼 <b>Профессиональная информация:</b>\n" + "\n".join(category_info) + "\n"
+            text += f"  • <b>Права (грузовые):</b> {h(application.cargo_license)}\n"
 
     # --- Опыт и документы ---
-    docs_info = []
+    text += "\n🗂 <b>ОПЫТ И ДОКУМЕНТЫ:</b>\n"
     if application.work_experience:
-        docs_info.append(f"  • <b>Опыт в сфере:</b> {experience_map.get(application.work_experience, h(application.work_experience))}")
+        text += f"  • <b>Опыт в сфере:</b> {experience_map.get(application.work_experience, h(application.work_experience))}\n"
     if application.previous_platforms:
-        docs_info.append(f"  • <b>Работал в:</b> {h(application.previous_platforms)}")
+        text += f"  • <b>Работал в:</b> {h(application.previous_platforms)}\n"
     if application.has_medical_cert:
-        docs_info.append(f"  • <b>Мед. справка:</b> {permit_map.get(application.has_medical_cert, h(application.has_medical_cert))}")
+        text += f"  • <b>Мед. справка:</b> {med_cert_map.get(application.has_medical_cert, h(application.has_medical_cert))}\n"
     if application.available_documents:
-        docs_info.append(f"  • <b>Документы:</b> {format_list(application.available_documents, docs_map)}")
-    if docs_info:
-        text += "\n🗂 <b>Опыт и документы:</b>\n" + "\n".join(docs_info) + "\n"
+        text += f"  • <b>Документы:</b> {format_list(application.available_documents, doc_map)}\n"
     
     # --- Комментарий клиента ---
     if application.comments:
-        text += f"\n💬 <b>Комментарий клиента:</b>\n<i>{h(application.comments)}</i>\n"
+        text += f"\n💬 <b>КОММЕНТАРИЙ КЛИЕНТА:</b>\n<i>{h(application.comments)}</i>\n"
     
     # --- Служебная информация ---
     text += f"\n- - - - - - - - - - - - - - - - - -\n"
@@ -719,11 +759,10 @@ def format_application_details(application: Application) -> str:
         text += f"<b>Менеджер:</b> Не назначен\n"
     
     # --- Согласия ---
-    agreements = []
-    agreements.append(f"  • <b>Наличие документов:</b> {format_bool(application.has_documents_confirmed)}")
-    agreements.append(f"  • <b>Условия работы:</b> {format_bool(application.agree_terms)}")
-    agreements.append(f"  • <b>Рассылка:</b> {format_bool(application.agree_marketing)}")
-    text += "\n⚖️ <b>Согласия:</b>\n" + "\n".join(agreements) + "\n"
+    text += "\n⚖️ <b>СОГЛАСИЯ:</b>\n"
+    text += f"  • <b>Наличие документов:</b> {format_bool(application.has_documents_confirmed)}\n"
+    text += f"  • <b>Условия работы:</b> {format_bool(application.agree_terms)}\n"
+    text += f"  • <b>Рассылка:</b> {format_bool(application.agree_marketing)}\n"
     
     if application.notes:
         text += f"\n🗒 <b>Заметки менеджера:</b>\n<i>{h(application.notes)}</i>\n"
