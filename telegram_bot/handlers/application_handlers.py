@@ -348,7 +348,7 @@ async def callback_application_contact(callback: CallbackQuery):
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="📨 Написать в Telegram", url=f"tg://resolve?phone={phone_number}")],
             [InlineKeyboardButton(text="🟢 Написать в WhatsApp", url=f"https://wa.me/{phone_number}")],
-            [InlineKeyboardButton(text="📞 Позвонить", url=f"tel:+{phone_number}")],
+            [InlineKeyboardButton(text="📞 Позвонить", url=f"callto:+{phone_number}")],
             [InlineKeyboardButton(text="◀️ Назад к заявке", callback_data=f"app_details_{app_id}")]
         ])
         
