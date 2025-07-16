@@ -9,11 +9,7 @@ import asyncio
 from typing import Optional, Dict, Any, List
 from datetime import datetime
 import os
-from dotenv import load_dotenv
 import re
-
-# Загружаем переменные окружения
-load_dotenv()
 
 class OpenRouterAI:
     """Сервис для работы с OpenRouter API"""
