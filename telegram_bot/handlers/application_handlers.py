@@ -97,7 +97,7 @@ async def process_applications_callback(
     try:
         manager = await manager_service.get_manager_by_telegram_id(telegram_id)
         if not manager:
-            await callback.answer("❌ Вы не зарегистрированы как менеджер.", parse_mode=ParseMode.HTML)
+            await callback.answer("❌ Вы не зарегистрированы как менеджер.", show_alert=True)
             return
         
         # Настройки пагинации
@@ -140,7 +140,7 @@ async def process_applications_callback(
                 )
             except Exception as edit_error:
                 if "message is not modified" in str(edit_error):
-                    await callback.answer("✅ Список заявок актуален", parse_mode=ParseMode.HTML)
+                    await callback.answer("✅ Список заявок актуален")
                 else:
                     raise edit_error
             return
@@ -216,16 +216,16 @@ async def process_applications_callback(
         
         try:
             await callback.message.edit_text(text, reply_markup=keyboard, parse_mode=ParseMode.HTML)
-            await callback.answer("✅ Список заявок обновлен", parse_mode=ParseMode.HTML)
+            await callback.answer("✅ Список заявок обновлен")
         except Exception as edit_error:
             if "message is not modified" in str(edit_error):
-                await callback.answer("✅ Список заявок актуален", parse_mode=ParseMode.HTML)
+                await callback.answer("✅ Список заявок актуален")
             else:
                 raise edit_error
     
     except Exception as e:
         logger.error(f"❌ Ошибка получения заявок: {e}")
-        await callback.answer("❌ Произошла ошибка при получении заявок.", parse_mode=ParseMode.HTML)
+        await callback.answer("❌ Произошла ошибка при получении заявок.", show_alert=True)
 
 def get_status_code(status: Optional[ApplicationStatus]) -> str:
     """Получить код статуса для использования в callback_data"""
@@ -278,7 +278,7 @@ async def callback_application_action(callback: CallbackQuery):
     try:
         manager = await manager_service.get_manager_by_telegram_id(telegram_id)
         if not manager:
-            await callback.answer("❌ Вы не зарегистрированы как менеджер.", parse_mode=ParseMode.HTML)
+            await callback.answer("❌ Вы не зарегистрированы как менеджер.", show_alert=True)
             return
         
         if action == "take":
@@ -305,9 +305,9 @@ async def callback_application_action(callback: CallbackQuery):
                         # Отправляем уведомление клиенту (если есть контакты)
                         await notify_client_about_assignment(application, manager)
                     else:
-                        await callback.answer("❌ Заявка не найдена.", parse_mode=ParseMode.HTML)
+                        await callback.answer("❌ Заявка не найдена.", show_alert=True)
             else:
-                await callback.answer("❌ Не удалось взять заявку. Возможно, её уже взял другой менеджер.", parse_mode=ParseMode.HTML)
+                await callback.answer("❌ Не удалось взять заявку. Возможно, её уже взял другой менеджер.", show_alert=True)
         
         elif action == "details":
             # Показать детали заявки
@@ -324,7 +324,7 @@ async def callback_application_action(callback: CallbackQuery):
                     keyboard = get_application_detail_keyboard(app_id, False)
                     await callback.message.edit_text(text, reply_markup=keyboard, parse_mode=ParseMode.HTML)
                 else:
-                    await callback.answer("❌ Заявка не найдена.", parse_mode=ParseMode.HTML)
+                    await callback.answer("❌ Заявка не найдена.", show_alert=True)
         
         elif action == "complete":
             # Завершить заявку
@@ -340,9 +340,9 @@ async def callback_application_action(callback: CallbackQuery):
                     text += "Спасибо за работу! 👍"
                     
                     await callback.message.edit_text(text, reply_markup=get_completed_application_keyboard(), parse_mode=ParseMode.HTML)
-                    await callback.answer("✅ Заявка завершена.", parse_mode=ParseMode.HTML)
+                    await callback.answer("✅ Заявка завершена!")
                 else:
-                    await callback.answer("❌ Заявка не найдена или не назначена вам.", parse_mode=ParseMode.HTML)
+                    await callback.answer("❌ Заявка не найдена или не назначена вам.", show_alert=True)
         
         elif action == "contact":
             # Связаться с клиентом
@@ -367,11 +367,11 @@ async def callback_application_action(callback: CallbackQuery):
                     
                     await callback.message.edit_text(contact_text, reply_markup=keyboard, parse_mode=ParseMode.HTML)
                 else:
-                    await callback.answer("❌ Заявка не найдена.", parse_mode=ParseMode.HTML)
+                    await callback.answer("❌ Заявка не найдена.", show_alert=True)
     
     except Exception as e:
         logger.error(f"❌ Ошибка обработки действия с заявкой: {e}")
-        await callback.answer("❌ Произошла ошибка.", parse_mode=ParseMode.HTML)
+        await callback.answer("❌ Произошла ошибка.", show_alert=True)
 
 @application_router.callback_query(F.data.startswith("app_details_"))
 async def callback_application_details(callback: CallbackQuery):
@@ -383,7 +383,7 @@ async def callback_application_details(callback: CallbackQuery):
     try:
         manager = await manager_service.get_manager_by_telegram_id(telegram_id)
         if not manager:
-            await callback.answer("❌ Вы не зарегистрированы как менеджер.", parse_mode=ParseMode.HTML)
+            await callback.answer("❌ Вы не зарегистрированы как менеджер.", show_alert=True)
             return
         
         # Получаем заявку из базы данных с предзагрузкой менеджера
@@ -396,7 +396,7 @@ async def callback_application_details(callback: CallbackQuery):
             application = result.scalars().first()
             
             if not application:
-                await callback.answer("❌ Заявка не найдена.", parse_mode=ParseMode.HTML)
+                await callback.answer("❌ Заявка не найдена.", show_alert=True)
                 return
             
             # Форматируем детальную информацию о заявке
@@ -440,7 +440,7 @@ async def callback_application_details(callback: CallbackQuery):
     
     except Exception as e:
         logger.error(f"❌ Ошибка получения деталей заявки: {e}")
-        await callback.answer("❌ Произошла ошибка при получении деталей заявки.", parse_mode=ParseMode.HTML)
+        await callback.answer("❌ Произошла ошибка при получении деталей заявки.", show_alert=True)
 
 
 @application_router.callback_query(F.data.startswith("app_contact_"))
@@ -517,7 +517,7 @@ async def callback_applications_menu(callback: CallbackQuery):
             await callback.answer("✅ Меню заявок актуально", parse_mode=ParseMode.HTML)
         else:
             logger.error(f"❌ Ошибка отображения меню заявок: {e}")
-            await callback.answer("❌ Произошла ошибка.", parse_mode=ParseMode.HTML)
+            await callback.answer("❌ Произошла ошибка.", show_alert=True)
 
 # Обработчик для пагинации
 @application_router.callback_query(F.data.startswith("page_"))
@@ -527,7 +527,7 @@ async def callback_pagination(callback: CallbackQuery):
     
     # Формат: page_STATUS_НОМЕР[_all]
     if len(data_parts) < 3:
-        await callback.answer("❌ Некорректный формат данных пагинации")
+        await callback.answer("❌ Некорректный формат данных пагинации", show_alert=True)
         return
     
     status_code = data_parts[1]
@@ -898,7 +898,7 @@ async def callback_application_note(callback: CallbackQuery):
         # Здесь можно реализовать FSM для ввода заметки
         # Пока просто показываем информацию
         await callback.message.edit_text(
-            f"📝 **Добавление заметки к заявке #{app_id}**\n\n"
+            f"📝 <b>Добавление заметки к заявке #{app_id}</b>\n\n"
             f"Функция добавления заметок находится в разработке.\n"
             f"Используйте команды для работы с заявкой.",
             reply_markup=InlineKeyboardMarkup(inline_keyboard=[
@@ -908,7 +908,7 @@ async def callback_application_note(callback: CallbackQuery):
         )
     except Exception as e:
         logger.error(f"❌ Ошибка добавления заметки: {e}")
-        await callback.answer("❌ Произошла ошибка.", parse_mode=ParseMode.HTML)
+        await callback.answer("❌ Произошла ошибка.", show_alert=True)
 
 @application_router.callback_query(F.data == "next_application")
 async def callback_next_application(callback: CallbackQuery):
@@ -919,14 +919,14 @@ async def callback_next_application(callback: CallbackQuery):
     try:
         manager = await manager_service.get_manager_by_telegram_id(telegram_id)
         if not manager:
-            await callback.answer("❌ Вы не зарегистрированы как менеджер.", parse_mode=ParseMode.HTML)
+            await callback.answer("❌ Вы не зарегистрированы как менеджер.", show_alert=True)
             return
         
         # Получаем следующую новую заявку
         applications = await manager_service.get_available_new_applications(limit=5)
         
         if not applications:
-            await callback.answer("📋 Больше нет новых заявок", parse_mode=ParseMode.HTML)
+            await callback.answer("📋 Больше нет новых заявок")
             return
         
         # Показываем вторую заявку (следующую)
@@ -957,7 +957,7 @@ async def callback_next_application(callback: CallbackQuery):
             
             await callback.message.edit_text(text, reply_markup=keyboard, parse_mode=ParseMode.HTML)
         else:
-            await callback.answer("📋 Это была последняя новая заявка", parse_mode=ParseMode.HTML)
+            await callback.answer("📋 Это была последняя новая заявка")
     except Exception as e:
         logger.error(f"❌ Ошибка получения следующей заявки: {e}")
-        await callback.answer("❌ Произошла ошибка.", parse_mode=ParseMode.HTML) 
+        await callback.answer("❌ Произошла ошибка.", show_alert=True) 
