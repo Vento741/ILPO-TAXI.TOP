@@ -79,8 +79,9 @@ async def callback_new_applications(callback: CallbackQuery):
             await callback.answer("❌ Вы не зарегистрированы как менеджер.")
             return
         
-        # Получаем новые неназначенные заявки (статус NEW)
-        applications = await manager_service.get_available_applications(
+        # Получаем новые заявки (статус NEW)
+        applications = await manager_service.get_manager_applications(
+            telegram_id, 
             status=ApplicationStatus.NEW, 
             limit=5
         )
@@ -200,34 +201,6 @@ async def callback_application_action(callback: CallbackQuery):
     
     except Exception as e:
         logger.error(f"❌ Ошибка обработки действия с заявкой: {e}")
-        await callback.answer("❌ Произошла ошибка.")
-
-# Обработчик для команды app_details
-@application_router.callback_query(F.data.startswith("app_details_"))
-async def callback_application_details(callback: CallbackQuery):
-    """Показать детали заявки"""
-    app_id = int(callback.data.split("_")[2])
-    user = callback.from_user
-    telegram_id = int(user.id)
-    
-    try:
-        manager = await manager_service.get_manager_by_telegram_id(telegram_id)
-        if not manager:
-            await callback.answer("❌ Вы не зарегистрированы как менеджер.")
-            return
-        
-        async with AsyncSessionLocal() as session:
-            application = await session.get(Application, app_id)
-            
-            if application:
-                text = format_application_details(application)
-                keyboard = get_application_detail_keyboard(app_id, False)
-                await callback.message.edit_text(text, reply_markup=keyboard)
-            else:
-                await callback.answer("❌ Заявка не найдена.")
-    
-    except Exception as e:
-        logger.error(f"❌ Ошибка показа деталей заявки: {e}")
         await callback.answer("❌ Произошла ошибка.")
 
 @application_router.callback_query(F.data == "my_applications")
@@ -361,7 +334,8 @@ async def callback_next_application(callback: CallbackQuery):
             return
         
         # Получаем следующую новую заявку
-        applications = await manager_service.get_available_applications(
+        applications = await manager_service.get_manager_applications(
+            telegram_id, 
             status=ApplicationStatus.NEW, 
             limit=5
         )
