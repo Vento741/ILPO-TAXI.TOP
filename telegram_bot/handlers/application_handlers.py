@@ -83,11 +83,17 @@ async def callback_new_applications(callback: CallbackQuery):
         applications = await manager_service.get_available_new_applications(limit=5)
         
         if not applications:
-            await callback.message.edit_text(
-                "📋 **Новых заявок нет**\n\n"
-                "Все новые заявки уже обработаны или назначены другим менеджерам.",
-                reply_markup=get_applications_empty_keyboard()
-            )
+            try:
+                await callback.message.edit_text(
+                    "📋 **Новых заявок нет**\n\n"
+                    "Все новые заявки уже обработаны или назначены другим менеджерам.",
+                    reply_markup=get_applications_empty_keyboard()
+                )
+            except Exception as edit_error:
+                if "message is not modified" in str(edit_error):
+                    await callback.answer("✅ Список заявок актуален")
+                else:
+                    raise edit_error
             return
         
         # Показываем первую заявку детально
@@ -95,7 +101,14 @@ async def callback_new_applications(callback: CallbackQuery):
         text = format_application_details(app)
         
         keyboard = get_application_detail_keyboard(app.id, len(applications) > 1)
-        await callback.message.edit_text(text, reply_markup=keyboard)
+        
+        try:
+            await callback.message.edit_text(text, reply_markup=keyboard)
+        except Exception as edit_error:
+            if "message is not modified" in str(edit_error):
+                await callback.answer("✅ Заявка актуальна")
+            else:
+                raise edit_error
     
     except Exception as e:
         logger.error(f"❌ Ошибка получения новых заявок: {e}")
@@ -202,7 +215,15 @@ async def callback_application_action(callback: CallbackQuery):
 @application_router.callback_query(F.data == "my_applications")
 async def callback_my_applications(callback: CallbackQuery):
     """Показать мои заявки"""
-    await cmd_applications(callback.message)
+    try:
+        await cmd_applications(callback.message)
+        await callback.answer()
+    except Exception as e:
+        if "message is not modified" in str(e):
+            await callback.answer("✅ Список заявок актуален")
+        else:
+            logger.error(f"❌ Ошибка при отображении заявок: {e}")
+            await callback.answer("❌ Произошла ошибка.")
 
 # ДОБАВЛЯЮ НЕДОСТАЮЩИЕ ОБРАБОТЧИКИ ДЛЯ ЗАЯВОК:
 
@@ -226,11 +247,17 @@ async def callback_in_progress_applications(callback: CallbackQuery):
         )
         
         if not applications:
-            await callback.message.edit_text(
-                "⚙️ **Заявки в работе**\n\n"
-                "У вас нет заявок в работе.",
-                reply_markup=get_applications_empty_keyboard()
-            )
+            try:
+                await callback.message.edit_text(
+                    "⚙️ **Заявки в работе**\n\n"
+                    "У вас нет заявок в работе.",
+                    reply_markup=get_applications_empty_keyboard()
+                )
+            except Exception as edit_error:
+                if "message is not modified" in str(edit_error):
+                    await callback.answer("✅ Список заявок актуален")
+                else:
+                    raise edit_error
             return
         
         text = "⚙️ **Заявки в работе:**\n\n"
@@ -252,7 +279,18 @@ async def callback_in_progress_applications(callback: CallbackQuery):
             [InlineKeyboardButton(text="◀️ Назад", callback_data="back_to_main")]
         ])
         
-        await callback.message.edit_text(text, reply_markup=keyboard)
+        try:
+            # Добавляем метку времени, чтобы сообщение всегда было разным
+            current_time = datetime.utcnow().strftime('%H:%M:%S')
+            text += f"\n\nОбновлено: {current_time}"
+            
+            await callback.message.edit_text(text, reply_markup=keyboard)
+        except Exception as edit_error:
+            if "message is not modified" in str(edit_error):
+                await callback.answer("✅ Список заявок актуален")
+            else:
+                raise edit_error
+                
     except Exception as e:
         logger.error(f"❌ Ошибка получения заявок в работе: {e}")
         await callback.answer("❌ Произошла ошибка.")
@@ -277,11 +315,17 @@ async def callback_completed_applications(callback: CallbackQuery):
         )
         
         if not applications:
-            await callback.message.edit_text(
-                "✅ **Завершенные заявки**\n\n"
-                "У вас нет завершенных заявок.",
-                reply_markup=get_applications_empty_keyboard()
-            )
+            try:
+                await callback.message.edit_text(
+                    "✅ **Завершенные заявки**\n\n"
+                    "У вас нет завершенных заявок.",
+                    reply_markup=get_applications_empty_keyboard()
+                )
+            except Exception as edit_error:
+                if "message is not modified" in str(edit_error):
+                    await callback.answer("✅ Список заявок актуален")
+                else:
+                    raise edit_error
             return
         
         text = "✅ **Завершенные заявки:**\n\n"
@@ -295,10 +339,7 @@ async def callback_completed_applications(callback: CallbackQuery):
             text += f"📱 {app.phone}\n"
             text += f"🏙️ {app.city}\n"
             text += f"🚗 {category_text}\n"
-            text += f"📅 {app.created_at.strftime('%d.%m.%Y %H:%M')}\n"
-            if app.processed_at:
-                text += f"✅ Завершена: {app.processed_at.strftime('%d.%m.%Y %H:%M')}\n"
-            text += "\n"
+            text += f"📅 {app.created_at.strftime('%d.%m.%Y %H:%M')}\n\n"
         
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="🔄 Обновить", callback_data="completed_applications")],
@@ -306,7 +347,18 @@ async def callback_completed_applications(callback: CallbackQuery):
             [InlineKeyboardButton(text="◀️ Назад", callback_data="back_to_main")]
         ])
         
-        await callback.message.edit_text(text, reply_markup=keyboard)
+        try:
+            # Добавляем метку времени, чтобы сообщение всегда было разным
+            current_time = datetime.utcnow().strftime('%H:%M:%S')
+            text += f"\n\nОбновлено: {current_time}"
+            
+            await callback.message.edit_text(text, reply_markup=keyboard)
+        except Exception as edit_error:
+            if "message is not modified" in str(edit_error):
+                await callback.answer("✅ Список заявок актуален")
+            else:
+                raise edit_error
+                
     except Exception as e:
         logger.error(f"❌ Ошибка получения завершенных заявок: {e}")
         await callback.answer("❌ Произошла ошибка.")
@@ -314,8 +366,15 @@ async def callback_completed_applications(callback: CallbackQuery):
 @application_router.callback_query(F.data == "refresh_applications")
 async def callback_refresh_applications(callback: CallbackQuery):
     """Обновить список заявок"""
-    await cmd_applications(callback.message)
-    await callback.answer("🔄 Список заявок обновлен")
+    try:
+        await cmd_applications(callback.message)
+        await callback.answer("✅ Список заявок обновлен")
+    except Exception as e:
+        if "message is not modified" in str(e):
+            await callback.answer("✅ Список заявок актуален")
+        else:
+            logger.error(f"❌ Ошибка при обновлении заявок: {e}")
+            await callback.answer("❌ Произошла ошибка.")
 
 @application_router.callback_query(F.data == "next_application")
 async def callback_next_application(callback: CallbackQuery):
@@ -431,7 +490,19 @@ async def callback_all_applications(callback: CallbackQuery):
             [InlineKeyboardButton(text="◀️ Назад", callback_data="back_to_main")]
         ])
         
-        await callback.message.edit_text(text, reply_markup=keyboard)
+        try:
+            # Добавляем метку времени, чтобы сообщение всегда было разным
+            current_time = datetime.utcnow().strftime('%H:%M:%S')
+            text += f"\n\nОбновлено: {current_time}"
+            
+            await callback.message.edit_text(text, reply_markup=keyboard)
+        except Exception as edit_error:
+            # Если ошибка связана с тем, что сообщение не изменилось
+            if "message is not modified" in str(edit_error):
+                await callback.answer("✅ Список заявок актуален")
+            else:
+                # Другие ошибки пробрасываем дальше
+                raise edit_error
     except Exception as e:
         logger.error(f"❌ Ошибка получения всех заявок: {e}")
         await callback.answer("❌ Произошла ошибка при получении заявок.")
