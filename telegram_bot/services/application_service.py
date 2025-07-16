@@ -606,10 +606,6 @@ class ApplicationService:
                     [
                         InlineKeyboardButton(text="✅ Взять в работу", callback_data=f"app_take_{application.id}"),
                         InlineKeyboardButton(text="📊 Подробности", callback_data=f"app_details_{application.id}")
-                    ],
-                    [
-                        InlineKeyboardButton(text=f"📞 {application.phone}", callback_data=f"phone_{application.id}"),
-                        InlineKeyboardButton(text="💬 WhatsApp", url=f"https://wa.me/{application.phone.replace('+', '').replace(' ', '').replace('(', '').replace(')', '').replace('-', '')}")
                     ]
                 ])
                 

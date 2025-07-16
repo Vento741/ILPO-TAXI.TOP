@@ -2,12 +2,12 @@
 Сервис для управления менеджерами поддержки
 """
 import logging
-from datetime import timezone
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, func, desc, or_
 from sqlalchemy.orm import selectinload
+from datetime import timezone
 
 from telegram_bot.models.database import AsyncSessionLocal
 from telegram_bot.models.support_models import (
@@ -178,7 +178,8 @@ class ManagerService:
             try:
                 # Получаем заявку
                 application = await session.get(Application, application_id)
-                if not application:
+                if not application or application.assigned_manager_id is not None:
+                    logger.warning(f"Попытка назначить уже назначенную или несуществующую заявку #{application_id}")
                     return False
                 
                 # Получаем менеджера
@@ -192,7 +193,7 @@ class ManagerService:
                 # Назначаем заявку
                 application.assigned_manager_id = manager.id
                 application.status = ApplicationStatus.ASSIGNED
-                application.assigned_at = datetime.now(timezone.utc)
+                application.assigned_at = datetime.utcnow() # Устанавливаем время назначения
                 
                 # Обновляем статистику менеджера
                 manager.total_applications += 1
@@ -451,35 +452,46 @@ class ManagerService:
                 active_chats = await redis_service.get_manager_active_chats(str(telegram_id))
                 
                 # Заявки за сегодня
-                today = datetime.utcnow().date()
-                today_applications = await session.execute(
+                today_utc = datetime.utcnow().date()
+                today_applications_query = await session.execute(
                     select(func.count(Application.id)).where(
                         and_(
                             Application.assigned_manager_id == manager.id,
-                            func.date(Application.completed_at) == today
+                            Application.status == ApplicationStatus.COMPLETED,
+                            func.date(Application.processed_at) == today_utc
                         )
                     )
                 )
-                today_count = today_applications.scalar() or 0
+                today_count = today_applications_query.scalar() or 0
                 
-                # Часы работы за неделю на основе заявок
-                week_ago = datetime.now(timezone.utc) - timedelta(days=7)
-                completed_apps_week = await session.execute(
+                # Подсчет времени работы по заявкам за неделю
+                week_ago_utc = datetime.utcnow() - timedelta(days=7)
+                completed_apps_week_query = await session.execute(
                     select(Application).where(
                         and_(
                             Application.assigned_manager_id == manager.id,
-                            Application.completed_at >= week_ago,
+                            Application.status == ApplicationStatus.COMPLETED,
+                            Application.processed_at >= week_ago_utc,
                             Application.assigned_at.isnot(None)
                         )
                     )
                 )
+                completed_apps_week = completed_apps_week_query.scalars().all()
                 
-                total_work_time = 0
-                for app in completed_apps_week.scalars().all():
-                    if app.completed_at and app.assigned_at:
-                        work_time = (app.completed_at - app.assigned_at).total_seconds()
-                        total_work_time += work_time
+                total_work_seconds = 0
+                for app in completed_apps_week:
+                    duration = app.processed_at - app.assigned_at
+                    total_work_seconds += duration.total_seconds()
                 
+                week_work_hours = round(total_work_seconds / 3600, 1)
+
+                # Конвертация времени последней активности в MSK
+                last_seen_msk = "Никогда"
+                if manager.last_seen:
+                    # Устанавливаем таймзону UTC и конвертируем в MSK (UTC+3)
+                    last_seen_msk_dt = manager.last_seen.replace(tzinfo=timezone.utc).astimezone(timezone(timedelta(hours=3)))
+                    last_seen_msk = last_seen_msk_dt.strftime('%Y-%m-%d %H:%M:%S')
+
                 return {
                     "manager_name": f"{manager.first_name} {manager.last_name or ''}".strip(),
                     "status": manager.status.value,
@@ -488,8 +500,8 @@ class ManagerService:
                     "total_applications": manager.total_applications,
                     "today_applications": today_count,
                     "avg_response_time": manager.avg_response_time,
-                    "week_work_hours": round(total_work_time / 3600, 1),
-                    "last_seen": manager.last_seen
+                    "week_work_hours": week_work_hours,
+                    "last_seen": last_seen_msk
                 }
                 
             except Exception as e:
