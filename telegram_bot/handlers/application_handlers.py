@@ -179,29 +179,24 @@ async def process_applications_callback(
         
         # Кнопки пагинации
         pagination_buttons = []
+        page_code = get_status_code(status, show_all)
+
         if page > 1:
-            # Кнопка "Назад" для перехода на предыдущую страницу
-            callback_data = f"page_{get_status_code(status)}_{page-1}"
-            if show_all:
-                callback_data += "_all"
             pagination_buttons.append(
-                InlineKeyboardButton(text="◀️ Назад", callback_data=callback_data)
+                InlineKeyboardButton(text="◀️ Назад", callback_data=f"page_{page_code}_{page-1}")
             )
         
         if page < total_pages:
-            # Кнопка "Вперед" для перехода на следующую страницу
-            callback_data = f"page_{get_status_code(status)}_{page+1}"
-            if show_all:
-                callback_data += "_all"
             pagination_buttons.append(
-                InlineKeyboardButton(text="Вперед ▶️", callback_data=callback_data)
+                InlineKeyboardButton(text="Вперед ▶️", callback_data=f"page_{page_code}_{page+1}")
             )
         
         if pagination_buttons:
             keyboard_buttons.append(pagination_buttons)
         
         # Кнопки управления
-        keyboard_buttons.append([InlineKeyboardButton(text="🔄 Обновить", callback_data=f"refresh_{get_status_code(status)}")])
+        refresh_code = get_status_code(status, show_all)
+        keyboard_buttons.append([InlineKeyboardButton(text="🔄 Обновить", callback_data=f"refresh_{refresh_code}")])
         keyboard_buttons.append([InlineKeyboardButton(text="◀️ К списку заявок", callback_data="applications_menu")])
         
         keyboard = InlineKeyboardMarkup(inline_keyboard=keyboard_buttons)
@@ -219,10 +214,11 @@ async def process_applications_callback(
         logger.error(f"❌ Ошибка получения заявок: {e}")
         await callback.answer("❌ Произошла ошибка при получении заявок.", show_alert=True)
 
-def get_status_code(status: Optional[ApplicationStatus]) -> str:
+def get_status_code(status: Optional[ApplicationStatus], show_all: bool = False) -> str:
     """Получить код статуса для использования в callback_data"""
     if status is None:
-        return "all"
+        return "all_admin" if show_all else "my"
+    
     return {
         ApplicationStatus.NEW: "new",
         ApplicationStatus.ASSIGNED: "assigned",
@@ -230,7 +226,7 @@ def get_status_code(status: Optional[ApplicationStatus]) -> str:
         ApplicationStatus.COMPLETED: "completed",
         ApplicationStatus.WAITING_CLIENT: "waiting",
         ApplicationStatus.CANCELLED: "cancelled"
-    }.get(status, "all")
+    }.get(status, "my")
 
 @application_router.callback_query(F.data == "my_applications")
 async def callback_my_applications(callback: CallbackQuery):
@@ -523,14 +519,13 @@ async def callback_pagination(callback: CallbackQuery):
     """Обработка пагинации для списков заявок"""
     data_parts = callback.data.split("_")
     
-    # Формат: page_STATUS_НОМЕР[_all]
+    # Формат: page_STATUS_НОМЕР
     if len(data_parts) < 3:
         await callback.answer("❌ Некорректный формат данных пагинации", show_alert=True)
         return
     
     status_code = data_parts[1]
     page = int(data_parts[2])
-    show_all = len(data_parts) > 3 and data_parts[3] == "all"
     
     # Определяем статус по коду
     status_map = {
@@ -540,9 +535,11 @@ async def callback_pagination(callback: CallbackQuery):
         "completed": ApplicationStatus.COMPLETED,
         "waiting": ApplicationStatus.WAITING_CLIENT,
         "cancelled": ApplicationStatus.CANCELLED,
-        "all": None
+        "my": None,
+        "all_admin": None
     }
     
+    show_all = status_code == "all_admin"
     status = status_map.get(status_code)
     
     # Вызываем обработчик с указанной страницей
@@ -562,11 +559,12 @@ async def callback_refresh_by_status(callback: CallbackQuery):
         "completed": ApplicationStatus.COMPLETED,
         "waiting": ApplicationStatus.WAITING_CLIENT,
         "cancelled": ApplicationStatus.CANCELLED,
-        "all": None
+        "my": None,
+        "all_admin": None
     }
     
     status = status_map.get(status_code)
-    show_all = status_code == "all"
+    show_all = status_code == "all_admin"
     
     # Вызываем обработчик с указанным статусом
     await process_applications_callback(callback, status=status, show_all=show_all)
