@@ -151,6 +151,7 @@ function setupFormFields() {
     const driverFields = document.querySelectorAll('.driver-field');
     const courierFields = document.querySelectorAll('.courier-field');
     const cargoFields = document.querySelectorAll('.cargo-field');
+    const driverOnlyFields = document.querySelectorAll('.car-details-driver-only');
     const experienceField = document.getElementById('experience');
     const transportField = document.getElementById('transport');
     const loadCapacityField = document.getElementById('loadCapacity');
@@ -159,6 +160,7 @@ function setupFormFields() {
     driverFields.forEach(field => field.classList.remove('hidden'));
     courierFields.forEach(field => field.classList.remove('hidden'));
     cargoFields.forEach(field => field.classList.remove('hidden'));
+    driverOnlyFields.forEach(field => field.classList.remove('hidden'));
 
     // Настройка обязательных полей
     experienceField.removeAttribute('required');
@@ -183,6 +185,7 @@ function setupFormFields() {
             break;
         case 'cargo':
             courierFields.forEach(field => field.classList.add('hidden'));
+            driverOnlyFields.forEach(field => field.classList.add('hidden')); // Скрываем специфичные для легкового авто поля
             experienceField.setAttribute('required', 'required');
             loadCapacityField.setAttribute('required', 'required');
             break;
