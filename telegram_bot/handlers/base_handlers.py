@@ -2,6 +2,7 @@
 Базовые обработчики команд Telegram бота поддержки ILPO-TAXI
 """
 import logging
+import aiohttp
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.filters import Command, StateFilter
@@ -1465,7 +1466,7 @@ async def handle_manager_reply(message: Message, state: FSMContext):
         await message.reply("❌ Произошла ошибка при отправке сообщения.")
 
 async def send_manager_message_to_webchat(chat_id: int, message_text: str, manager_telegram_id: int) -> bool:
-    """Отправить сообщение менеджера в веб-чат"""
+    """Отправить сообщение менеджера в веб-чат через API"""
     try:
         from telegram_bot.models.database import AsyncSessionLocal
         
@@ -1497,42 +1498,45 @@ async def send_manager_message_to_webchat(chat_id: int, message_text: str, manag
             
             await session.commit()
             
-            # Отправляем через WebSocket (если есть подключение)
+            # Отправляем через API
             web_session_id = support_chat.chat_metadata.get("web_session_id") if support_chat.chat_metadata else None
             
-            logger.info(f"🔍 Проверяем web_session_id: {web_session_id}")
-            logger.info(f"🔍 Метаданные чата: {support_chat.chat_metadata}")
+            if not web_session_id:
+                logger.warning(f"⚠️ Не найден web_session_id для чата {support_chat.chat_id}, отправка невозможна.")
+                return False
+
+            message_data = {
+                "type": "manager_message",
+                "content": message_text,
+                "timestamp": datetime.utcnow().isoformat(),
+                "sender_name": support_chat.manager.first_name,
+                "chat_id": support_chat.chat_id
+            }
             
-            if web_session_id:
-                # Импортируем менеджер соединений из chat_routes
-                from routers.chat_routes import manager as connection_manager
-                
-                message_data = {
-                    "type": "manager_message",
-                    "content": message_text,
-                    "timestamp": datetime.utcnow().isoformat(),
-                    "sender_name": support_chat.manager.first_name,
-                    "chat_id": support_chat.chat_id
-                }
-                
-                try:
-                    result = await connection_manager.send_to_session(
-                        web_session_id, 
-                        json.dumps(message_data, ensure_ascii=False)
-                    )
-                    if result:
-                        logger.info(f"✅ Сообщение менеджера отправлено в веб-чат для сессии {web_session_id}")
-                    else:
-                        logger.warning(f"⚠️ Не удалось отправить сообщение в веб-чат для сессии {web_session_id} - клиент отключился")
-                        return False
-                except Exception as ws_error:
-                    logger.error(f"❌ Ошибка отправки через WebSocket: {ws_error}")
-                    return False
-            else:
-                logger.warning(f"⚠️ Не найден web_session_id для чата {support_chat.chat_id}")
+            api_url = f"http://127.0.0.1:{settings.API_PORT}/api/chat/send-to-client"
+            payload = {
+                "session_id": web_session_id,
+                "message_json": message_data
+            }
             
-            logger.info(f"✅ Сообщение менеджера отправлено в веб-чат {support_chat.chat_id}")
-            return True
+            logger.info(f"📤 Отправка сообщения менеджеру через API на {api_url} для сессии {web_session_id}")
+
+            try:
+                async with aiohttp.ClientSession() as http_session:
+                    async with http_session.post(api_url, json=payload) as response:
+                        if response.status == 200:
+                            logger.info(f"✅ API-запрос на отправку сообщения для сессии {web_session_id} успешен.")
+                            return True
+                        else:
+                            response_text = await response.text()
+                            logger.error(f"❌ API-запрос на отправку сообщения для сессии {web_session_id} провален. Статус: {response.status}, Ответ: {response_text}")
+                            return False
+            except aiohttp.ClientConnectorError as conn_error:
+                logger.error(f"❌ Ошибка подключения к API ({api_url}): {conn_error}")
+                return False
+            except Exception as http_error:
+                logger.error(f"❌ Ошибка HTTP-запроса к API для отправки сообщения: {http_error}")
+                return False
             
     except Exception as e:
         logger.error(f"❌ Ошибка отправки сообщения в веб-чат: {e}")

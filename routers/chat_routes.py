@@ -416,6 +416,38 @@ async def transfer_to_manager(request: Request):
             "error": "Внутренняя ошибка сервера"
         }
 
+@chat_router.post("/api/chat/send-to-client")
+async def send_message_to_client(request: Request):
+    """Отправить сообщение от менеджера (через бота) клиенту в веб-чат"""
+    try:
+        data = await request.json()
+        session_id = data.get("session_id")
+        message_json = data.get("message_json")
+
+        if not session_id or not message_json:
+            return JSONResponse(
+                status_code=400,
+                content={"success": False, "error": "session_id и message_json обязательны"}
+            )
+        
+        # Используем глобальный менеджер соединений из этого модуля
+        success = await manager.send_to_session(session_id, json.dumps(message_json, ensure_ascii=False))
+
+        if success:
+            return {"success": True, "message": "Сообщение успешно отправлено клиенту."}
+        else:
+            return JSONResponse(
+                status_code=404,
+                content={"success": False, "error": "Клиент не найден или отключился."}
+            )
+
+    except Exception as e:
+        logger.error(f"❌ Ошибка в /api/chat/send-to-client: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "error": "Внутренняя ошибка сервера"}
+        )
+
 @chat_router.post("/api/chat/send-message")
 async def send_message_to_support(request: Request):
     """Отправить сообщение от веб-клиента менеджеру в Telegram"""
