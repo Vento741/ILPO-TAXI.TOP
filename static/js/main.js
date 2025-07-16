@@ -16,6 +16,9 @@ const maxReconnectAttempts = 5;
 let heartbeatInterval = null;
 let connectionCheckInterval = null;
 let lastHeartbeat = null;
+let touchStartY = 0;
+let touchEndY = 0;
+let isMobile = window.innerWidth < 768;
 
 // Инициализация при загрузке страницы
 document.addEventListener('DOMContentLoaded', function() {
@@ -26,12 +29,14 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeAnimations();
     initializeNavigation();
     initBenefitsSwiper();
+    initReviewsSwiper();
     initProcessTabs();
     initCounterAnimations();
     initScrollAnimations();
     initScrollToTop();
     initShrinkHeader();
     initPageVisibilityHandling();
+    initChatSwipeGestures();
 
     console.log('🚀 ILPO-TAXI инициализирован с OpenRouter AI');
 });
@@ -72,7 +77,79 @@ function initializeEventListeners() {
         }
     });
 
+    // Отслеживание изменения размера окна для определения мобильного устройства
+    window.addEventListener('resize', function() {
+        isMobile = window.innerWidth < 768;
+    });
+
     // Инициализация навигации будет выполнена отдельно
+}
+
+/**
+ * Инициализация свайп-жестов для чата на мобильных устройствах
+ */
+function initChatSwipeGestures() {
+    if (!chatWidget || !chatWidget.querySelector('.chat-header')) return;
+
+    const chatHeader = document.querySelector('.chat-header');
+
+    if (chatHeader) {
+        // Обработчики для свайпа вниз по заголовку чата
+        chatHeader.addEventListener('touchstart', handleTouchStart, { passive: true });
+        chatHeader.addEventListener('touchmove', handleTouchMove, { passive: false });
+        chatHeader.addEventListener('touchend', handleTouchEnd, { passive: true });
+    }
+
+    // Добавляем обработчики и для всего виджета чата
+    chatWidget.addEventListener('touchstart', handleTouchStart, { passive: true });
+    chatWidget.addEventListener('touchmove', handleTouchMove, { passive: false });
+    chatWidget.addEventListener('touchend', handleTouchEnd, { passive: true });
+}
+
+/**
+ * Обработчики свайп-жестов
+ */
+function handleTouchStart(event) {
+    touchStartY = event.touches[0].clientY;
+}
+
+function handleTouchMove(event) {
+    if (!chatWidget.classList.contains('open')) return;
+
+    touchEndY = event.touches[0].clientY;
+    const touchDiff = touchEndY - touchStartY;
+
+    // Если свайп вниз и начинается с верхней части чата
+    if (touchDiff > 0 && touchStartY < 150) {
+        // Предотвращаем стандартное поведение скролла
+        event.preventDefault();
+
+        // Применяем трансформацию для эффекта "тянущегося" чата
+        const translateY = Math.min(touchDiff * 0.5, 200);
+        chatWidget.style.transform = `translateY(${translateY}px)`;
+        chatWidget.style.opacity = 1 - (translateY / 400);
+    }
+}
+
+function handleTouchEnd(event) {
+    if (!chatWidget.classList.contains('open')) return;
+
+    const touchDiff = touchEndY - touchStartY;
+
+    // Если свайп был достаточно длинным для закрытия чата
+    if (touchDiff > 100 && touchStartY < 150) {
+        closeChat();
+    }
+
+    // Возвращаем чат в исходное положение с анимацией
+    chatWidget.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
+    chatWidget.style.transform = '';
+    chatWidget.style.opacity = '';
+
+    // Убираем transition после завершения анимации
+    setTimeout(() => {
+        chatWidget.style.transition = '';
+    }, 300);
 }
 
 /**
@@ -86,6 +163,11 @@ function openChat() {
     chatWidget.classList.add('open');
     chatToggle.classList.add('hidden');
 
+    // Блокируем прокрутку страницы на мобильных устройствах
+    if (isMobile) {
+        document.body.style.overflow = 'hidden';
+    }
+
     // Подключаемся к WebSocket если еще не подключены
     if (!websocket || websocket.readyState === WebSocket.CLOSED) {
         connectWebSocket();
@@ -94,6 +176,11 @@ function openChat() {
     // Фокус на поле ввода
     setTimeout(() => {
         if (chatInput) chatInput.focus();
+
+        // Прокручиваем чат вниз
+        if (chatBody) {
+            chatBody.scrollTop = chatBody.scrollHeight;
+        }
     }, 300);
 
     trackEvent('chat_opened');
@@ -105,6 +192,11 @@ function closeChat() {
 
     chatWidget.classList.remove('open');
     chatToggle.classList.remove('hidden');
+
+    // Разблокируем прокрутку страницы на мобильных устройствах
+    if (isMobile) {
+        document.body.style.overflow = '';
+    }
 
     // Не закрываем WebSocket при закрытии чата, но останавливаем heartbeat для экономии ресурсов
     // stopHeartbeat();
@@ -323,58 +415,50 @@ function addMessage(content, sender, metadata = {}) {
     const messageDiv = document.createElement('div');
     messageDiv.className = `chat-message ${sender}-message`;
 
+    if (sender === 'ai' && metadata.intent) {
+        messageDiv.setAttribute('data-intent', metadata.intent);
+        messageDiv.setAttribute('data-sender', 'ai');
+    }
+
     const messageContent = document.createElement('div');
     messageContent.className = 'message-content';
 
-    // Конвертируем простой Markdown в HTML для лучшего отображения
+    // Преобразуем Markdown в HTML для сообщений ИИ
     if (sender === 'ai') {
-        const convertedHTML = convertMarkdownToHTML(content);
-        console.log('🔄 Конвертированный HTML:', convertedHTML);
-        messageContent.innerHTML = convertedHTML;
-
-        // Проверяем, не было ли сообщение обрезано
-        if (content.includes('[Сообщение сокращено]')) {
-            console.log('⚠️ Обнаружено сокращенное сообщение');
-            const warningDiv = document.createElement('div');
-            warningDiv.style.cssText = 'margin-top: 10px; padding: 8px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; font-size: 0.9em; color: #856404;';
-            warningDiv.innerHTML = '⚠️ Сообщение было сокращено из-за большого размера';
-            messageContent.appendChild(warningDiv);
-        }
+        messageContent.innerHTML = convertMarkdownToHTML(content);
     } else {
         messageContent.textContent = content;
     }
 
+    messageDiv.appendChild(messageContent);
+
+    // Добавляем время
     const messageTime = document.createElement('div');
     messageTime.className = 'message-time';
 
-    // Если есть метаданные, показываем дополнительную информацию
-    let timeText = new Date(metadata.timestamp || Date.now()).toLocaleTimeString('ru-RU', {
-        hour: '2-digit',
-        minute: '2-digit'
-    });
+    const now = new Date();
+    const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    messageTime.textContent = timeString;
 
-    if (metadata.processing_time && sender === 'ai') {
-        timeText += ` • ${metadata.processing_time.toFixed(1)}с`;
-    }
-
-    if (metadata.intent && sender === 'ai') {
-        messageDiv.setAttribute('data-intent', metadata.intent);
-    }
-
-    messageTime.textContent = timeText;
-
-    messageDiv.appendChild(messageContent);
     messageDiv.appendChild(messageTime);
+
+    // Добавляем сообщение в чат
     chatBody.appendChild(messageDiv);
 
-    // Анимация появления
-    setTimeout(() => {
-        messageDiv.style.opacity = '1';
-        messageDiv.style.transform = 'translateY(0)';
-    }, 50);
-
-    // Прокрутка к последнему сообщению
+    // Прокручиваем чат вниз
     chatBody.scrollTop = chatBody.scrollHeight;
+
+    // Добавляем анимацию появления
+    setTimeout(() => {
+        messageDiv.classList.add('animate-in');
+    }, 10);
+
+    // Добавляем haptic feedback на мобильных устройствах
+    if (sender === 'ai' && isMobile && window.navigator && window.navigator.vibrate) {
+        window.navigator.vibrate(50);
+    }
+
+    return messageDiv;
 }
 
 // Простая конвертация Markdown в HTML
@@ -901,6 +985,70 @@ function initBenefitsSwiper() {
             init: function() {
                 // Скрываем стрелки при инициализации
                 const container = document.querySelector('.benefits-swiper-container');
+                if (container) {
+                    container.addEventListener('mouseenter', () => {
+                        this.allowTouchMove = true;
+                    });
+                    container.addEventListener('mouseleave', () => {
+                        this.allowTouchMove = true;
+                    });
+                }
+            }
+        }
+    });
+}
+
+// Инициализация Swiper для Reviews
+function initReviewsSwiper() {
+    const reviewsSwiper = new Swiper('.reviews-swiper', {
+        slidesPerView: 1,
+        spaceBetween: 30,
+        loop: true,
+        speed: 800, // Замедляем анимацию переключения
+        autoplay: {
+            delay: 7000, // Увеличиваем задержку автопрокрутки
+            disableOnInteraction: false,
+            pauseOnMouseEnter: true, // Пауза при наведении
+        },
+        pagination: {
+            el: '.reviews-pagination',
+            clickable: true,
+            dynamicBullets: true,
+        },
+        navigation: {
+            nextEl: '.reviews-next',
+            prevEl: '.reviews-prev',
+        },
+        breakpoints: {
+            768: {
+                slidesPerView: 2,
+                spaceBetween: 30,
+            },
+            1200: {
+                slidesPerView: 3,
+                spaceBetween: 30,
+            }
+        },
+        effect: 'slide',
+        grabCursor: true, // Курсор-рука при наведении
+        watchOverflow: true, // Скрывает навигацию если слайдов мало
+        on: {
+            slideChange: function() {
+                // Добавляем эффект при смене слайда
+                const activeSlide = this.slides[this.activeIndex];
+                if (activeSlide) {
+                    const icon = activeSlide.querySelector('.icon-glow');
+                    if (icon) {
+                        icon.style.animation = 'none';
+                        setTimeout(() => {
+                            icon.style.animation = '';
+                        }, 100);
+                    }
+                }
+            },
+            init: function() {
+                // Скрываем стрелки при инициализации
+                const container = document.querySelector('.reviews-swiper-container');
                 if (container) {
                     container.addEventListener('mouseenter', () => {
                         this.allowTouchMove = true;
