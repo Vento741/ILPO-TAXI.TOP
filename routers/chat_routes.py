@@ -81,36 +81,28 @@ class ConnectionManager:
             await websocket.send_text(message)
         except Exception as e:
             print(f"❌ Ошибка отправки сообщения: {e}")
+            raise e
     
     async def send_to_session(self, session_id: str, message: str):
         websocket = self.active_connections.get(session_id)
         if websocket:
             try:
                 await self.send_personal_message(message, websocket)
-                print(f"✅ Сообщение успешно отправлено в WebSocket для сессии {session_id}")
+                print(f"✅ Сообщение успешно отправлено в сессию {session_id}")
+                return True
             except Exception as e:
-                print(f"❌ Ошибка отправки WebSocket сообщения для сессии {session_id}: {e}")
+                print(f"❌ Ошибка отправки в сессию {session_id}: {e}")
                 # Удаляем разорванное соединение
-                if session_id in self.active_connections:
-                    del self.active_connections[session_id]
-                if websocket in self.connection_sessions:
-                    del self.connection_sessions[websocket]
-                raise e
+                self.disconnect(websocket)
+                return False
         else:
-            print(f"⚠️ WebSocket соединение для сессии {session_id} не найдено в активных соединениях")
-            print(f"🔍 Активные сессии: {list(self.active_connections.keys())}")
+            print(f"⚠️ WebSocket соединение для сессии {session_id} не найдено")
+            print(f"📊 Активные соединения: {list(self.active_connections.keys())}")
+            return False
     
     async def broadcast(self, message: str):
         for websocket in self.active_connections.values():
             await self.send_personal_message(message, websocket)
-    
-    def get_connection_info(self) -> dict:
-        """Получить информацию о подключениях для диагностики"""
-        return {
-            "total_connections": len(self.active_connections),
-            "active_sessions": list(self.active_connections.keys()),
-            "session_mapping": {ws: session for ws, session in self.connection_sessions.items()}
-        }
 
 # Создаем экземпляр менеджера соединений
 manager = ConnectionManager()
@@ -352,15 +344,11 @@ async def chat_health_check():
         # Получаем статистику
         stats = await chat_manager.get_all_sessions_stats()
         
-        # Получаем информацию о WebSocket соединениях
-        connection_info = manager.get_connection_info()
-        
         return JSONResponse(content={
             "status": "healthy",
             "openrouter_api": "working" if test_response else "error",
             "active_sessions": stats.get("active_sessions", 0),
             "total_sessions": stats.get("total_sessions", 0),
-            "websocket_connections": connection_info,
             "timestamp": datetime.now().isoformat()
         })
     except Exception as e:
