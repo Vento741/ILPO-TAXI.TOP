@@ -14,6 +14,7 @@ from telegram_bot.models.support_models import Application, ApplicationStatus
 from telegram_bot.services.manager_service import manager_service
 from telegram_bot.config.settings import settings
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.enums import ParseMode
 
 logger = logging.getLogger(__name__)
 
@@ -349,6 +350,7 @@ class ApplicationService:
         """Уведомить менеджера о новой заявке через Telegram"""
         try:
             from aiogram import Bot
+            from aiogram.enums import ParseMode
             from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
             
             bot = Bot(token=settings.TELEGRAM_BOT_TOKEN)
@@ -359,22 +361,26 @@ class ApplicationService:
                 
                 if not application:
                     return
+
+                phone_number_clean = ''.join(filter(str.isdigit, application.phone))
+                if len(phone_number_clean) == 11 and phone_number_clean.startswith('8'):
+                    phone_number_clean = '7' + phone_number_clean[1:]
                 
                 # Формируем максимально подробное сообщение
                 text = f"""
-🔔 **НОВАЯ ЗАЯВКА НАЗНАЧЕНА ВАМ!**
+🔔 <b>НОВАЯ ЗАЯВКА НАЗНАЧЕНА ВАМ!</b>
 
-📋 **Заявка #{application.id}** | {self.get_category_text(application.category)}
+📋 <b>Заявка #{application.id}</b> | {self.get_category_text(application.category)}
 
-👤 **ОСНОВНАЯ ИНФОРМАЦИЯ:**
-• **Имя:** {application.full_name}
-• **Телефон:** {application.phone}
-• **Возраст:** {application.age if application.age else 'Не указан'} лет
-• **Город:** {application.city}"""
+👤 <b>ОСНОВНАЯ ИНФОРМАЦИЯ:</b>
+• <b>Имя:</b> {application.full_name}
+• <b>Телефон:</b> <a href="tel:+{phone_number_clean}">{application.phone}</a>
+• <b>Возраст:</b> {application.age if application.age else 'Не указан'} лет
+• <b>Город:</b> {application.city}"""
 
                 # Добавляем дополнительные основные поля
                 if application.email:
-                    text += f"\n• **Email:** {application.email}"
+                    text += f"\n• <b>Email:</b> {application.email}"
                 
                 if application.citizenship:
                     citizenship_map = {
@@ -382,7 +388,7 @@ class ApplicationService:
                         "eaeu": "🌐 Гражданин ЕАЭС",
                         "other": "🌍 Гражданин другой страны"
                     }
-                    text += f"\n• **Гражданство:** {citizenship_map.get(application.citizenship, application.citizenship)}"
+                    text += f"\n• <b>Гражданство:</b> {citizenship_map.get(application.citizenship, application.citizenship)}"
                 
                 if application.work_status:
                     status_map = {
@@ -392,14 +398,14 @@ class ApplicationService:
                         "employee": "📝 Трудовой договор",
                         "not_sure": "❓ Не определился (нужна консультация)"
                     }
-                    text += f"\n• **Статус работы:** {status_map.get(application.work_status, application.work_status)}"
+                    text += f"\n• <b>Статус работы:</b> {status_map.get(application.work_status, application.work_status)}"
 
                 # Информация для водителей
                 if application.category in ['driver', 'both', 'cargo']:
-                    text += f"\n\n🚗 **ИНФОРМАЦИЯ О ВОДИТЕЛЕ:**"
+                    text += f"\n\n🚗 <b>ИНФОРМАЦИЯ О ВОДИТЕЛЕ:</b>"
                     
                     if application.experience:
-                        text += f"\n• **Стаж вождения:** {application.experience} лет"
+                        text += f"\n• <b>Стаж вождения:</b> {application.experience} лет"
                     
                     if application.has_driver_license:
                         license_map = {
@@ -407,7 +413,7 @@ class ApplicationService:
                             "getting": "⏳ Получаю права в данный момент",
                             "no": "❌ Нет прав"
                         }
-                        text += f"\n• **Водительские права:** {license_map.get(application.has_driver_license, application.has_driver_license)}"
+                        text += f"\n• <b>Водительские права:</b> {license_map.get(application.has_driver_license, application.has_driver_license)}"
                     
                     if application.has_car:
                         car_map = {
@@ -415,7 +421,7 @@ class ApplicationService:
                             "rent": "🔑 Планирую арендовать",
                             "no": "❌ Нет автомобиля"
                         }
-                        text += f"\n• **Автомобиль:** {car_map.get(application.has_car, application.has_car)}"
+                        text += f"\n• <b>Автомобиль:</b> {car_map.get(application.has_car, application.has_car)}"
                     
                     # Детали автомобиля
                     if application.car_brand or application.car_model:
@@ -427,7 +433,7 @@ class ApplicationService:
                         if application.car_year:
                             car_info += f" ({application.car_year} г.)"
                         if car_info:
-                            text += f"\n• **Модель автомобиля:** {car_info}"
+                            text += f"\n• <b>Модель автомобиля:</b> {car_info}"
                     
                     if application.car_class:
                         class_map = {
@@ -436,7 +442,7 @@ class ApplicationService:
                             "comfort_plus": "⭐⭐ Комфорт+ (Toyota Camry, KIA Optima)",
                             "business": "💎 Бизнес (BMW 5, Mercedes E, Audi A6)"
                         }
-                        text += f"\n• **Желаемый класс:** {class_map.get(application.car_class, application.car_class)}"
+                        text += f"\n• <b>Желаемый класс:</b> {class_map.get(application.car_class, application.car_class)}"
                     
                     if application.has_taxi_permit:
                         permit_map = {
@@ -445,11 +451,11 @@ class ApplicationService:
                             "no": "❌ Нет разрешения",
                             "help_needed": "🆘 Нужна помощь в получении"
                         }
-                        text += f"\n• **Разрешение такси:** {permit_map.get(application.has_taxi_permit, application.has_taxi_permit)}"
+                        text += f"\n• <b>Разрешение такси:</b> {permit_map.get(application.has_taxi_permit, application.has_taxi_permit)}"
 
                 # Информация для курьеров
                 if application.category in ['courier', 'both']:
-                    text += f"\n\n📦 **ИНФОРМАЦИЯ О КУРЬЕРЕ:**"
+                    text += f"\n\n📦 <b>ИНФОРМАЦИЯ О КУРЬЕРЕ:</b>"
                     
                     if application.transport:
                         transport_map = {
@@ -459,7 +465,7 @@ class ApplicationService:
                             "motorcycle": "🏍️ Мотоцикл/скутер",
                             "car": "🚗 Автомобиль"
                         }
-                        text += f"\n• **Транспорт:** {transport_map.get(application.transport, application.transport)}"
+                        text += f"\n• <b>Транспорт:</b> {transport_map.get(application.transport, application.transport)}"
                     
                     if application.delivery_types:
                         delivery_map = {
@@ -469,7 +475,7 @@ class ApplicationService:
                             "all": "🌟 Все категории"
                         }
                         delivery_list = [delivery_map.get(dt, dt) for dt in application.delivery_types]
-                        text += f"\n• **Категории доставки:** {', '.join(delivery_list)}"
+                        text += f"\n• <b>Категории доставки:</b> {', '.join(delivery_list)}"
                     
                     if application.has_thermo_bag:
                         bag_map = {
@@ -478,7 +484,7 @@ class ApplicationService:
                             "rent": "🔑 Буду арендовать",
                             "no": "❌ Нет термосумки"
                         }
-                        text += f"\n• **Термосумка:** {bag_map.get(application.has_thermo_bag, application.has_thermo_bag)}"
+                        text += f"\n• <b>Термосумка:</b> {bag_map.get(application.has_thermo_bag, application.has_thermo_bag)}"
                     
                     if application.courier_license:
                         courier_license_map = {
@@ -486,11 +492,11 @@ class ApplicationService:
                             "motorcycle": "🏍️ Есть права категории A/A1",
                             "no": "❌ Нет прав"
                         }
-                        text += f"\n• **Права (для автокурьера):** {courier_license_map.get(application.courier_license, application.courier_license)}"
+                        text += f"\n• <b>Права (для автокурьера):</b> {courier_license_map.get(application.courier_license, application.courier_license)}"
 
                 # Информация для грузовых
                 if application.category == 'cargo':
-                    text += f"\n\n🚛 **ГРУЗОВЫЕ ПЕРЕВОЗКИ:**"
+                    text += f"\n\n🚛 <b>ГРУЗОВЫЕ ПЕРЕВОЗКИ:</b>"
                     
                     if application.load_capacity:
                         capacity_map = {
@@ -501,7 +507,7 @@ class ApplicationService:
                             "20": "🚛 До 20 тонн",
                             "20+": "🚛🚛 Более 20 тонн"
                         }
-                        text += f"\n• **Грузоподъемность:** {capacity_map.get(application.load_capacity, application.load_capacity)}"
+                        text += f"\n• <b>Грузоподъемность:</b> {capacity_map.get(application.load_capacity, application.load_capacity)}"
                     
                     if application.truck_type:
                         truck_map = {
@@ -511,7 +517,7 @@ class ApplicationService:
                             "platform": "🚛 Платформа",
                             "dump": "🏗️ Самосвал"
                         }
-                        text += f"\n• **Тип кузова:** {truck_map.get(application.truck_type, application.truck_type)}"
+                        text += f"\n• <b>Тип кузова:</b> {truck_map.get(application.truck_type, application.truck_type)}"
                     
                     if application.cargo_license:
                         cargo_license_map = {
@@ -520,10 +526,10 @@ class ApplicationService:
                             "ce": "🚛 Категория CE",
                             "no": "❌ Нет прав на грузовой"
                         }
-                        text += f"\n• **Права на грузовой:** {cargo_license_map.get(application.cargo_license, application.cargo_license)}"
+                        text += f"\n• <b>Права на грузовой:</b> {cargo_license_map.get(application.cargo_license, application.cargo_license)}"
 
                 # Документы и опыт
-                text += f"\n\n📄 **ДОКУМЕНТЫ И ОПЫТ:**"
+                text += f"\n\n📄 <b>ДОКУМЕНТЫ И ОПЫТ:</b>"
                 
                 if application.work_experience:
                     exp_map = {
@@ -533,10 +539,10 @@ class ApplicationService:
                         "3_5_years": "🥇 3-5 лет",
                         "more_5_years": "🏆 Более 5 лет"
                     }
-                    text += f"\n• **Опыт работы:** {exp_map.get(application.work_experience, application.work_experience)}"
+                    text += f"\n• <b>Опыт работы:</b> {exp_map.get(application.work_experience, application.work_experience)}"
                 
                 if application.previous_platforms:
-                    text += f"\n• **Работал в:** {application.previous_platforms}"
+                    text += f"\n• <b>Работал в:</b> {application.previous_platforms}"
                 
                 if application.has_medical_cert:
                     med_map = {
@@ -545,7 +551,7 @@ class ApplicationService:
                         "no": "❌ Нет справки",
                         "help_needed": "🆘 Нужна помощь в получении"
                     }
-                    text += f"\n• **Медсправка:** {med_map.get(application.has_medical_cert, application.has_medical_cert)}"
+                    text += f"\n• <b>Медсправка:</b> {med_map.get(application.has_medical_cert, application.has_medical_cert)}"
                 
                 if application.available_documents:
                     doc_map = {
@@ -556,10 +562,10 @@ class ApplicationService:
                         "car_docs": "🚙 Документы на авто"
                     }
                     docs = [doc_map.get(doc, doc) for doc in application.available_documents]
-                    text += f"\n• **Имеющиеся документы:** {', '.join(docs)}"
+                    text += f"\n• <b>Имеющиеся документы:</b> {', '.join(docs)}"
 
                 # Предпочтения и график
-                text += f"\n\n⏰ **ПРЕДПОЧТЕНИЯ:**"
+                text += f"\n\n⏰ <b>ПРЕДПОЧТЕНИЯ:</b>"
                 
                 if application.preferred_time:
                     time_map = {
@@ -569,7 +575,7 @@ class ApplicationService:
                         "18-21": "🌃 18:00-21:00",
                         "any": "🕐 Любое время"
                     }
-                    text += f"\n• **Время звонка:** {time_map.get(application.preferred_time, application.preferred_time)}"
+                    text += f"\n• <b>Время звонка:</b> {time_map.get(application.preferred_time, application.preferred_time)}"
                 
                 if application.work_schedule:
                     schedule_map = {
@@ -579,7 +585,7 @@ class ApplicationService:
                         "evenings": "🌃 Вечерние часы",
                         "flexible": "🔄 Гибкий график"
                     }
-                    text += f"\n• **График работы:** {schedule_map.get(application.work_schedule, application.work_schedule)}"
+                    text += f"\n• <b>График работы:</b> {schedule_map.get(application.work_schedule, application.work_schedule)}"
 
                 # Согласия
                 agreements = []
@@ -591,21 +597,24 @@ class ApplicationService:
                     agreements.append("✅ Рассылка")
                 
                 if agreements:
-                    text += f"\n• **Согласия:** {', '.join(agreements)}"
+                    text += f"\n• <b>Согласия:</b> {', '.join(agreements)}"
 
                 # Комментарии
                 if application.comments:
-                    text += f"\n\n💬 **КОММЕНТАРИИ КЛИЕНТА:**\n_{application.comments}_"
+                    text += f"\n\n💬 <b>КОММЕНТАРИИ КЛИЕНТА:</b>\n<i>{application.comments}</i>"
 
                 # Метаданные
-                text += f"\n\n📅 **ВРЕМЯ ПОДАЧИ:** {application.created_at.strftime('%d.%m.%Y %H:%M')}"
+                text += f"\n\n📅 <b>ВРЕМЯ ПОДАЧИ:</b> {application.created_at.strftime('%d.%m.%Y %H:%M')}"
                 
-                text += f"\n\n⚡ **ДЕЙСТВИЯ:**"
+                text += f"\n\n⚡ <b>ДЕЙСТВИЯ:</b>"
                 
                 keyboard = InlineKeyboardMarkup(inline_keyboard=[
                     [
                         InlineKeyboardButton(text="✅ Взять в работу", callback_data=f"app_take_{application.id}"),
                         InlineKeyboardButton(text="📊 Подробности", callback_data=f"app_details_{application.id}")
+                    ],
+                    [
+                        InlineKeyboardButton(text="💬 WhatsApp", url=f"https://wa.me/{phone_number_clean}")
                     ]
                 ])
                 
@@ -613,10 +622,10 @@ class ApplicationService:
                     chat_id=manager_telegram_id,
                     text=text,
                     reply_markup=keyboard,
-                    parse_mode="Markdown"
+                    parse_mode=ParseMode.HTML
                 )
                 
-                logger.info(f"✅ Менеджер {manager_telegram_id} уведомлен о заявке #{application_id} (полная информация)")
+                logger.info(f"✅ Менеджер {manager_telegram_id} уведомлен о заявке #{application.id} (полная информация)")
                 
         except Exception as e:
             logger.error(f"❌ Ошибка уведомления менеджера: {e}")
