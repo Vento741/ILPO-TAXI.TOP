@@ -365,35 +365,33 @@ async def transfer_to_manager(request: Request):
         from telegram_bot.services.manager_service import manager_service
         
         # Создаем чат поддержки с сохранением истории
-        support_chat = await manager_service.create_support_chat(
+        chat_data = await manager_service.create_support_chat(
             session_id=session_id,
             chat_history=chat_history,
             client_name=client_name,
             client_phone=client_phone
         )
         
-        if not support_chat:
+        if not chat_data:
             return {
                 "success": False,
                 "error": "Нет доступных менеджеров",
                 "message": "Все менеджеры заняты. Оставьте заявку на сайте, мы свяжемся с вами."
             }
         
-        # Получаем информацию о менеджере
-        manager = await manager_service.get_manager_by_telegram_id(support_chat.manager.telegram_id)
-        
         # Отправляем уведомление менеджеру
-        await manager_service.notify_manager_new_chat(
-            manager_telegram_id=support_chat.manager.telegram_id,
-            chat=support_chat
+        await manager_service.notify_manager_new_chat_by_data(
+            manager_telegram_id=chat_data["manager_telegram_id"],
+            chat_data=chat_data,
+            chat_history=chat_history
         )
         
         return {
             "success": True,
             "message": "Менеджер подключен!",
-            "manager_name": manager.first_name if manager else "Менеджер",
-            "chat_id": support_chat.chat_id,
-            "support_chat_id": support_chat.id
+            "manager_name": chat_data["manager_name"],
+            "chat_id": chat_data["chat_id"],
+            "support_chat_id": chat_data["id"]
         }
         
     except Exception as e:

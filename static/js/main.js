@@ -1435,6 +1435,14 @@ document.addEventListener('DOMContentLoaded', initCTAButtons);
 async function requestManagerTransfer() {
     const transferBtn = document.getElementById('transferToManagerBtn');
 
+    // Сначала запрашиваем данные клиента
+    const clientData = await showClientDataForm();
+
+    if (!clientData) {
+        // Пользователь отменил
+        return;
+    }
+
     // Блокируем кнопку
     transferBtn.disabled = true;
     transferBtn.innerHTML = '⏳ Подключаем менеджера...';
@@ -1452,8 +1460,8 @@ async function requestManagerTransfer() {
             body: JSON.stringify({
                 session_id: sessionId,
                 chat_history: getChatHistory(),
-                client_name: null, // Можно добавить форму для имени клиента
-                client_phone: null // Можно добавить форму для телефона клиента
+                client_name: clientData.name,
+                client_phone: clientData.phone
             })
         });
 
@@ -1522,6 +1530,190 @@ function getChatHistory() {
     });
 
     return messages;
+}
+
+// Функция показа формы для сбора данных клиента
+function showClientDataForm() {
+    return new Promise((resolve) => {
+        // Создаем модальное окно
+        const modal = document.createElement('div');
+        modal.className = 'modal fade show';
+        modal.style.display = 'block';
+        modal.style.backgroundColor = 'rgba(0,0,0,0.5)';
+        modal.innerHTML = `
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="fas fa-user-tie me-2"></i>
+                            Подключение к менеджеру
+                        </h5>
+                        <button type="button" class="btn-close" onclick="closeClientDataForm()"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="text-muted mb-4">
+                            Для подключения к живому менеджеру нам нужна небольшая информация о вас:
+                        </p>
+                        <form id="clientDataForm">
+                            <div class="mb-3">
+                                <label for="clientName" class="form-label">
+                                    <i class="fas fa-user me-1"></i>
+                                    Ваше имя *
+                                </label>
+                                <input type="text" class="form-control" id="clientName" name="name" 
+                                       placeholder="Например: Алексей" required maxlength="50">
+                                <div class="invalid-feedback"></div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="clientPhone" class="form-label">
+                                    <i class="fas fa-phone me-1"></i>
+                                    Номер телефона *
+                                </label>
+                                <input type="tel" class="form-control" id="clientPhone" name="phone" 
+                                       placeholder="+7 (999) 123-45-67" required>
+                                <div class="invalid-feedback"></div>
+                                <small class="form-text text-muted">
+                                    Менеджер сможет позвонить вам при необходимости
+                                </small>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" onclick="closeClientDataForm()">
+                            <i class="fas fa-times me-1"></i>
+                            Отмена
+                        </button>
+                        <button type="button" class="btn btn-primary" onclick="submitClientDataForm()">
+                            <i class="fas fa-user-tie me-1"></i>
+                            Подключить менеджера
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        // Инициализируем маску для телефона
+        const phoneInput = modal.querySelector('#clientPhone');
+        initPhoneMaskForInput(phoneInput);
+
+        // Сохраняем resolve функцию для доступа из других функций
+        window.clientDataFormResolve = resolve;
+
+        // Фокус на первое поле
+        setTimeout(() => {
+            modal.querySelector('#clientName').focus();
+        }, 100);
+
+        // Обработка Enter для отправки формы
+        modal.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                submitClientDataForm();
+            }
+        });
+
+        // Обработка Escape для закрытия
+        modal.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeClientDataForm();
+            }
+        });
+    });
+}
+
+// Закрытие формы данных клиента
+function closeClientDataForm() {
+    const modal = document.querySelector('.modal.show');
+    if (modal) {
+        modal.remove();
+    }
+    if (window.clientDataFormResolve) {
+        window.clientDataFormResolve(null);
+        window.clientDataFormResolve = null;
+    }
+}
+
+// Отправка формы данных клиента
+function submitClientDataForm() {
+    const form = document.getElementById('clientDataForm');
+    const nameInput = form.querySelector('#clientName');
+    const phoneInput = form.querySelector('#clientPhone');
+
+    let isValid = true;
+
+    // Валидация имени
+    if (!nameInput.value.trim()) {
+        showFieldError(nameInput, 'Пожалуйста, введите ваше имя');
+        isValid = false;
+    } else if (nameInput.value.trim().length < 2) {
+        showFieldError(nameInput, 'Имя должно содержать не менее 2 символов');
+        isValid = false;
+    } else {
+        clearFieldError(nameInput);
+    }
+
+    // Валидация телефона
+    if (!phoneInput.value.trim()) {
+        showFieldError(phoneInput, 'Пожалуйста, введите номер телефона');
+        isValid = false;
+    } else if (!isValidPhone(phoneInput.value)) {
+        showFieldError(phoneInput, 'Пожалуйста, введите корректный номер телефона');
+        isValid = false;
+    } else {
+        clearFieldError(phoneInput);
+    }
+
+    if (!isValid) {
+        return;
+    }
+
+    // Данные валидны - отправляем
+    const clientData = {
+        name: nameInput.value.trim(),
+        phone: phoneInput.value.trim()
+    };
+
+    // Закрываем форму
+    const modal = document.querySelector('.modal.show');
+    if (modal) {
+        modal.remove();
+    }
+
+    // Возвращаем данные
+    if (window.clientDataFormResolve) {
+        window.clientDataFormResolve(clientData);
+        window.clientDataFormResolve = null;
+    }
+}
+
+// Инициализация маски телефона для конкретного поля
+function initPhoneMaskForInput(phoneInput) {
+    if (!phoneInput) return;
+
+    phoneInput.addEventListener('input', function(e) {
+        let value = e.target.value.replace(/\D/g, '');
+
+        if (value.length > 0) {
+            if (value[0] !== '7') {
+                value = '7' + value;
+            }
+
+            let formattedValue = '+7 ';
+            if (value.length > 1) formattedValue += '(' + value.substring(1, 4);
+            if (value.length >= 5) formattedValue += ') ' + value.substring(4, 7);
+            if (value.length >= 8) formattedValue += '-' + value.substring(7, 9);
+            if (value.length >= 10) formattedValue += '-' + value.substring(9, 11);
+
+            e.target.value = formattedValue;
+        }
+    });
+
+    phoneInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Backspace' && e.target.value === '+7 (') {
+            e.target.value = '';
+        }
+    });
 }
 
 // Обновить статус чата

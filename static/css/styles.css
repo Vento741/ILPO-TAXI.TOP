@@ -3266,6 +3266,143 @@ p {
 
 
 /* =============================================================================
+   CLIENT DATA FORM MODAL
+   ============================================================================= */
+
+.modal {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+.modal .modal-content {
+    border: none;
+    border-radius: var(--border-radius-lg);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+}
+
+.modal .modal-header {
+    background: linear-gradient(135deg, var(--yandex-yellow) 0%, var(--yandex-yellow-dark) 100%);
+    color: var(--yandex-black);
+    border-bottom: none;
+    padding: 1.5rem;
+}
+
+.modal .modal-title {
+    font-weight: 600;
+    font-size: 1.25rem;
+}
+
+.modal .btn-close {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    color: var(--yandex-black);
+    opacity: 0.7;
+    transition: var(--transition);
+}
+
+.modal .btn-close:hover {
+    opacity: 1;
+    transform: scale(1.1);
+}
+
+.modal .modal-body {
+    padding: 2rem;
+}
+
+.modal .form-label {
+    font-weight: 600;
+    color: var(--yandex-black);
+    margin-bottom: 0.5rem;
+}
+
+.modal .form-control {
+    border: 2px solid rgba(255, 219, 77, 0.2);
+    border-radius: var(--border-radius);
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+    transition: var(--transition);
+}
+
+.modal .form-control:focus {
+    border-color: var(--yandex-yellow);
+    box-shadow: 0 0 0 0.2rem rgba(255, 219, 77, 0.25);
+    outline: none;
+}
+
+.modal .form-control.is-invalid {
+    border-color: var(--error-color);
+}
+
+.modal .invalid-feedback {
+    display: block;
+    font-size: 0.875rem;
+    color: var(--error-color);
+    margin-top: 0.25rem;
+}
+
+.modal .form-text {
+    font-size: 0.8rem;
+    margin-top: 0.25rem;
+}
+
+.modal .modal-footer {
+    background: rgba(248, 249, 250, 0.5);
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+    padding: 1.5rem;
+}
+
+.modal .btn {
+    padding: 0.75rem 1.5rem;
+    font-weight: 600;
+    border-radius: var(--border-radius);
+    transition: var(--transition);
+}
+
+.modal .btn-primary {
+    background: linear-gradient(135deg, var(--yandex-yellow) 0%, var(--yandex-yellow-dark) 100%);
+    border: 2px solid var(--yandex-yellow);
+    color: var(--yandex-black);
+}
+
+.modal .btn-primary:hover {
+    background: linear-gradient(135deg, var(--yandex-yellow-dark) 0%, #E6B800 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(255, 219, 77, 0.3);
+}
+
+.modal .btn-secondary {
+    background: rgba(108, 117, 125, 0.1);
+    border: 2px solid rgba(108, 117, 125, 0.2);
+    color: var(--text-secondary);
+}
+
+.modal .btn-secondary:hover {
+    background: rgba(108, 117, 125, 0.2);
+    transform: translateY(-1px);
+}
+
+
+/* Анимация появления модального окна */
+
+.modal.show .modal-dialog {
+    animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+    from {
+        transform: translateY(-50px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+
+/* =============================================================================
    CHAT WIDGET
    ============================================================================= */
 
