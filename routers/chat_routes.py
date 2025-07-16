@@ -168,11 +168,12 @@ async def websocket_chat(websocket: WebSocket, session_id: str = Query(None)):
             from telegram_bot.services.manager_service import manager_service
             
             # Ищем активный чат поддержки для этой сессии
-            web_chat_id = f"web_{session_id}"
+            logger.info(f"🔍 Проверка передачи чата менеджеру для session_id: {session_id}")
             support_chat = await check_if_transferred_to_manager(session_id)
             
             if support_chat and support_chat.is_active:
                 # Чат передан менеджеру - пересылаем сообщение
+                logger.info(f"✅ Чат {support_chat.chat_id} (сессия {session_id}) передан менеджеру {support_chat.manager.first_name}. Пересылка сообщения.")
                 success = await manager_service.send_message_to_manager(
                     chat_id=support_chat.chat_id,
                     message_text=user_message,
@@ -203,6 +204,7 @@ async def websocket_chat(websocket: WebSocket, session_id: str = Query(None)):
                 
                 continue  # Не обрабатываем через ИИ
             
+            logger.info(f"ℹ️ Чат для сессии {session_id} не передан менеджеру. Обработка через ИИ.")
             # Чат не передан менеджеру - обычная обработка через ИИ
             # Добавляем сообщение пользователя в историю
             await chat_manager.add_message(session_id, "user", user_message)
@@ -472,6 +474,8 @@ async def check_if_transferred_to_manager(session_id: str):
             
     except Exception as e:
         logger.error(f"❌ Ошибка проверки передачи чата менеджеру: {e}")
+        import traceback
+        logger.error(f"Полная ошибка: {traceback.format_exc()}")
         return None
 
 @chat_router.get("/api/chat/{chat_id}/messages")

@@ -772,6 +772,8 @@ class ManagerService:
             from aiogram import Bot
             from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
             
+            logger.info(f"▶️ Попытка отправить сообщение от клиента в чат {chat_id}")
+            
             # Находим чат поддержки
             async with AsyncSessionLocal() as session:
                 result = await session.execute(
@@ -782,11 +784,11 @@ class ManagerService:
                 support_chat = result.scalar_one_or_none()
                 
                 if not support_chat or not support_chat.manager:
-                    logger.error(f"❌ Чат {chat_id} не найден или не назначен менеджер")
+                    logger.error(f"❌ Чат {chat_id} не найден или не назначен менеджер. Процесс остановлен.")
                     return False
                 
                 if not support_chat.is_active:
-                    logger.error(f"❌ Чат {chat_id} неактивен")
+                    logger.warning(f"⚠️ Попытка отправить сообщение в неактивный чат {chat_id}. Процесс остановлен.")
                     return False
                 
                 bot = Bot(token=settings.TELEGRAM_BOT_TOKEN)
@@ -825,6 +827,7 @@ class ManagerService:
                     ]
                 ])
                 
+                logger.info(f"✉️ Отправка сообщения в Telegram менеджеру {support_chat.manager.telegram_id} для чата {chat_id}")
                 await bot.send_message(
                     chat_id=support_chat.manager.telegram_id,
                     text=text,
