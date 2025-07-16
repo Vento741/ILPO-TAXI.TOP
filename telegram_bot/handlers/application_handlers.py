@@ -2,8 +2,10 @@
 Обработчики для работы с заявками клиентов
 """
 import logging
+import html
 from typing import List, Optional
 from aiogram import Router, F
+from aiogram.enums import ParseMode
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.filters import Command
 from datetime import datetime
@@ -22,7 +24,7 @@ application_router = Router()
 @application_router.message(Command("test"))
 async def cmd_test(message: Message):
     """Тестовая команда для отладки"""
-    await message.answer("🧪 Тестовая команда работает! Application router активен.")
+    await message.answer("🧪 Тестовая команда работает! Application router активен.", parse_mode=ParseMode.HTML)
 
 @application_router.message(Command("applications"))
 async def cmd_applications(message: Message):
@@ -33,7 +35,7 @@ async def cmd_applications(message: Message):
     try:
         manager = await manager_service.get_manager_by_telegram_id(telegram_id)
         if not manager:
-            await message.answer("❌ Вы не зарегистрированы как менеджер.")
+            await message.answer("❌ Вы не зарегистрированы как менеджер.", parse_mode=ParseMode.HTML)
             return
         
         # Получаем все заявки менеджера (без фильтра по статусу)
@@ -43,7 +45,8 @@ async def cmd_applications(message: Message):
             await message.answer(
                 "📋 **Список заявок пуст**\n\n"
                 "У вас пока нет назначенных заявок.",
-                reply_markup=get_applications_empty_keyboard()
+                reply_markup=get_applications_empty_keyboard(),
+                parse_mode=ParseMode.HTML
             )
             return
         
@@ -63,13 +66,13 @@ async def cmd_applications(message: Message):
         
         # Добавляем метку времени, чтобы сообщение всегда было разным
         current_time = datetime.utcnow().strftime('%H:%M:%S')
-        text += f"Обновлено: {current_time}"
+        text += f"\nОбновлено: {current_time}"
         
-        await message.answer(text, reply_markup=get_applications_keyboard())
+        await message.answer(text, reply_markup=get_applications_keyboard(), parse_mode=ParseMode.HTML)
     
     except Exception as e:
         logger.error(f"❌ Ошибка получения заявок: {e}")
-        await message.answer("❌ Произошла ошибка при получении заявок.")
+        await message.answer("❌ Произошла ошибка при получении заявок.", parse_mode=ParseMode.HTML)
 
 # Вспомогательная функция для обработки списка заявок через callback
 async def process_applications_callback(
@@ -92,7 +95,7 @@ async def process_applications_callback(
     try:
         manager = await manager_service.get_manager_by_telegram_id(telegram_id)
         if not manager:
-            await callback.answer("❌ Вы не зарегистрированы как менеджер.")
+            await callback.answer("❌ Вы не зарегистрированы как менеджер.", parse_mode=ParseMode.HTML)
             return
         
         # Настройки пагинации
@@ -130,11 +133,12 @@ async def process_applications_callback(
                 await callback.message.edit_text(
                     f"📋 **{status_text} заявки**\n\n"
                     "У вас пока нет заявок в этой категории.",
-                    reply_markup=get_applications_empty_keyboard()
+                    reply_markup=get_applications_empty_keyboard(),
+                    parse_mode=ParseMode.HTML
                 )
             except Exception as edit_error:
                 if "message is not modified" in str(edit_error):
-                    await callback.answer("✅ Список заявок актуален")
+                    await callback.answer("✅ Список заявок актуален", parse_mode=ParseMode.HTML)
                 else:
                     raise edit_error
             return
@@ -165,7 +169,7 @@ async def process_applications_callback(
         
         # Добавляем метку времени, чтобы сообщение всегда было разным
         current_time = datetime.utcnow().strftime('%H:%M:%S')
-        text += f"Обновлено: {current_time}"
+        text += f"\nОбновлено: {current_time}"
         
         # Формируем клавиатуру с кнопками выбора заявки и пагинации
         keyboard_buttons = []
@@ -209,17 +213,17 @@ async def process_applications_callback(
         keyboard = InlineKeyboardMarkup(inline_keyboard=keyboard_buttons)
         
         try:
-            await callback.message.edit_text(text, reply_markup=keyboard)
-            await callback.answer("✅ Список заявок обновлен")
+            await callback.message.edit_text(text, reply_markup=keyboard, parse_mode=ParseMode.HTML)
+            await callback.answer("✅ Список заявок обновлен", parse_mode=ParseMode.HTML)
         except Exception as edit_error:
             if "message is not modified" in str(edit_error):
-                await callback.answer("✅ Список заявок актуален")
+                await callback.answer("✅ Список заявок актуален", parse_mode=ParseMode.HTML)
             else:
                 raise edit_error
     
     except Exception as e:
         logger.error(f"❌ Ошибка получения заявок: {e}")
-        await callback.answer("❌ Произошла ошибка при получении заявок.")
+        await callback.answer("❌ Произошла ошибка при получении заявок.", parse_mode=ParseMode.HTML)
 
 def get_status_code(status: Optional[ApplicationStatus]) -> str:
     """Получить код статуса для использования в callback_data"""
@@ -272,7 +276,7 @@ async def callback_application_action(callback: CallbackQuery):
     try:
         manager = await manager_service.get_manager_by_telegram_id(telegram_id)
         if not manager:
-            await callback.answer("❌ Вы не зарегистрированы как менеджер.")
+            await callback.answer("❌ Вы не зарегистрированы как менеджер.", parse_mode=ParseMode.HTML)
             return
         
         if action == "take":
@@ -289,14 +293,14 @@ async def callback_application_action(callback: CallbackQuery):
                         text += format_application_details(application)
                         
                         keyboard = get_taken_application_keyboard(app_id)
-                        await callback.message.edit_text(text, reply_markup=keyboard)
+                        await callback.message.edit_text(text, reply_markup=keyboard, parse_mode=ParseMode.HTML)
                         
                         # Отправляем уведомление клиенту (если есть контакты)
                         await notify_client_about_assignment(application, manager)
                     else:
-                        await callback.answer("❌ Заявка не найдена.")
+                        await callback.answer("❌ Заявка не найдена.", parse_mode=ParseMode.HTML)
             else:
-                await callback.answer("❌ Не удалось взять заявку. Возможно, её уже взял другой менеджер.")
+                await callback.answer("❌ Не удалось взять заявку. Возможно, её уже взял другой менеджер.", parse_mode=ParseMode.HTML)
         
         elif action == "details":
             # Показать детали заявки
@@ -306,9 +310,9 @@ async def callback_application_action(callback: CallbackQuery):
                 if application:
                     text = format_application_details(application)
                     keyboard = get_application_detail_keyboard(app_id, False)
-                    await callback.message.edit_text(text, reply_markup=keyboard)
+                    await callback.message.edit_text(text, reply_markup=keyboard, parse_mode=ParseMode.HTML)
                 else:
-                    await callback.answer("❌ Заявка не найдена.")
+                    await callback.answer("❌ Заявка не найдена.", parse_mode=ParseMode.HTML)
         
         elif action == "complete":
             # Завершить заявку
@@ -323,10 +327,10 @@ async def callback_application_action(callback: CallbackQuery):
                     text = f"✅ **Заявка #{app_id} завершена!**\n\n"
                     text += "Спасибо за работу! 👍"
                     
-                    await callback.message.edit_text(text, reply_markup=get_completed_application_keyboard())
-                    await callback.answer("✅ Заявка завершена!")
+                    await callback.message.edit_text(text, reply_markup=get_completed_application_keyboard(), parse_mode=ParseMode.HTML)
+                    await callback.answer("✅ Заявка завершена.", parse_mode=ParseMode.HTML)
                 else:
-                    await callback.answer("❌ Заявка не найдена или не назначена вам.")
+                    await callback.answer("❌ Заявка не найдена или не назначена вам.", parse_mode=ParseMode.HTML)
         
         elif action == "contact":
             # Связаться с клиентом
@@ -349,13 +353,13 @@ async def callback_application_action(callback: CallbackQuery):
                         [InlineKeyboardButton(text="◀️ Назад к заявке", callback_data=f"app_details_{app_id}")]
                     ])
                     
-                    await callback.message.edit_text(contact_text, reply_markup=keyboard)
+                    await callback.message.edit_text(contact_text, reply_markup=keyboard, parse_mode=ParseMode.HTML)
                 else:
-                    await callback.answer("❌ Заявка не найдена.")
+                    await callback.answer("❌ Заявка не найдена.", parse_mode=ParseMode.HTML)
     
     except Exception as e:
         logger.error(f"❌ Ошибка обработки действия с заявкой: {e}")
-        await callback.answer("❌ Произошла ошибка.")
+        await callback.answer("❌ Произошла ошибка.", parse_mode=ParseMode.HTML)
 
 @application_router.callback_query(F.data.startswith("app_details_"))
 async def callback_application_details(callback: CallbackQuery):
@@ -367,7 +371,7 @@ async def callback_application_details(callback: CallbackQuery):
     try:
         manager = await manager_service.get_manager_by_telegram_id(telegram_id)
         if not manager:
-            await callback.answer("❌ Вы не зарегистрированы как менеджер.")
+            await callback.answer("❌ Вы не зарегистрированы как менеджер.", parse_mode=ParseMode.HTML)
             return
         
         # Получаем заявку из базы данных
@@ -375,7 +379,7 @@ async def callback_application_details(callback: CallbackQuery):
             application = await session.get(Application, app_id)
             
             if not application:
-                await callback.answer("❌ Заявка не найдена.")
+                await callback.answer("❌ Заявка не найдена.", parse_mode=ParseMode.HTML)
                 return
             
             # Форматируем детальную информацию о заявке
@@ -415,11 +419,56 @@ async def callback_application_details(callback: CallbackQuery):
             keyboard = InlineKeyboardMarkup(inline_keyboard=keyboard_buttons)
             
             # Отправляем детальную информацию
-            await callback.message.edit_text(text, reply_markup=keyboard)
+            await callback.message.edit_text(text, reply_markup=keyboard, parse_mode=ParseMode.HTML)
     
     except Exception as e:
         logger.error(f"❌ Ошибка получения деталей заявки: {e}")
-        await callback.answer("❌ Произошла ошибка при получении деталей заявки.")
+        await callback.answer("❌ Произошла ошибка при получении деталей заявки.", parse_mode=ParseMode.HTML)
+
+
+@application_router.callback_query(F.data.startswith("app_contact_"))
+async def callback_application_contact(callback: CallbackQuery):
+    """Показать кнопки для связи с клиентом"""
+    app_id = int(callback.data.split("_")[2])
+    
+    try:
+        # Получаем заявку, чтобы получить номер телефона
+        async with AsyncSessionLocal() as session:
+            application = await session.get(Application, app_id)
+            if not application or not application.phone:
+                await callback.answer("❌ Номер телефона клиента не найден.", show_alert=True)
+                return
+
+        # Очищаем номер телефона
+        phone_number = ''.join(filter(str.isdigit, application.phone))
+        # Для российских номеров, которые могут начинаться с 8, заменяем на 7 для корректной работы ссылок
+        if len(phone_number) == 11 and phone_number.startswith('8'):
+            phone_number = '7' + phone_number[1:]
+        
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="📨 Написать в Telegram", url=f"tg://resolve?phone={phone_number}")],
+            [InlineKeyboardButton(text="🟢 Написать в WhatsApp", url=f"https://wa.me/{phone_number}")],
+            [InlineKeyboardButton(text="📞 Позвонить", url=f"tel:{phone_number}")],
+            [InlineKeyboardButton(text="◀️ Назад к заявке", callback_data=f"app_details_{app_id}")]
+        ])
+        
+        text = (
+            f"<b>Выберите способ связи с клиентом:</b>\n\n"
+            f"<b>Имя:</b> {html.escape(application.full_name)}\n"
+            f"<b>Телефон:</b> <code>{html.escape(application.phone)}</code>"
+        )
+
+        await callback.message.edit_text(
+            text,
+            reply_markup=keyboard,
+            parse_mode=ParseMode.HTML
+        )
+        await callback.answer()
+
+    except Exception as e:
+        logger.error(f"❌ Ошибка при отображении контактов: {e}")
+        await callback.answer("❌ Произошла ошибка.", show_alert=True)
+
 
 @application_router.callback_query(F.data == "all_applications")
 async def callback_all_applications(callback: CallbackQuery):
@@ -443,14 +492,15 @@ async def callback_applications_menu(callback: CallbackQuery):
         await callback.message.edit_text(
             "📋 **Управление заявками**\n\n"
             "Выберите категорию заявок для просмотра:",
-            reply_markup=keyboard
+            reply_markup=keyboard,
+            parse_mode=ParseMode.HTML
         )
     except Exception as e:
         if "message is not modified" in str(e):
-            await callback.answer("✅ Меню заявок актуально")
+            await callback.answer("✅ Меню заявок актуально", parse_mode=ParseMode.HTML)
         else:
             logger.error(f"❌ Ошибка отображения меню заявок: {e}")
-            await callback.answer("❌ Произошла ошибка.")
+            await callback.answer("❌ Произошла ошибка.", parse_mode=ParseMode.HTML)
 
 # Обработчик для пагинации
 @application_router.callback_query(F.data.startswith("page_"))
@@ -507,28 +557,35 @@ async def callback_refresh_by_status(callback: CallbackQuery):
     await process_applications_callback(callback, status=status, show_all=show_all)
 
 def format_application_details(application: Application) -> str:
-    """Форматирование детальной информации о заявке"""
+    """Форматирование детальной информации о заявке с использованием HTML."""
+    
+    def h(text: Optional[str]) -> str:
+        """Экранирует HTML-теги для безопасного отображения."""
+        if text is None:
+            return ""
+        return html.escape(str(text))
+
     status_emoji = get_status_emoji(application.status)
     category_text = get_category_text(application.category)
     
-    text = f"{status_emoji} **Заявка #{application.id}**\n\n"
-    text += f"🚗 **Категория:** {category_text}\n\n"
+    text = f"{status_emoji} <b>Заявка #{application.id}</b>\n\n"
+    text += f"🚗 <b>Категория:</b> {h(category_text)}\n\n"
     
-    text += f"👤 **Основная информация:**\n"
-    text += f"• Имя: {application.full_name}\n"
-    text += f"• Телефон: {application.phone}\n"
-    text += f"• Возраст: {application.age if application.age else 'Не указан'} лет\n"
-    text += f"• Город: {application.city}\n"
+    text += f"👤 <b>Основная информация:</b>\n"
+    text += f"• <b>Имя:</b> {h(application.full_name)}\n"
+    text += f"• <b>Телефон:</b> <code>{h(application.phone)}</code>\n"
+    text += f"• <b>Возраст:</b> {h(application.age) if application.age else 'Не указан'} лет\n"
+    text += f"• <b>Город:</b> {h(application.city)}\n"
     if application.email:
-        text += f"• Email: {application.email}\n"
+        text += f"• <b>Email:</b> {h(application.email)}\n"
     text += "\n"
     
     # Профессиональная информация
-    text += f"🚗 **Профессиональная информация:**\n"
+    text += f"🚗 <b>Профессиональная информация:</b>\n"
     
     if application.category in ['driver', 'both', 'cargo']:
         if application.experience:
-            text += f"• Стаж вождения: {application.experience} лет\n"
+            text += f"• <b>Стаж вождения:</b> {h(application.experience)} лет\n"
     
     if application.category in ['courier', 'both']:
         if application.transport:
@@ -539,128 +596,38 @@ def format_application_details(application: Application) -> str:
                 "motorcycle": "🏍️ Мотоцикл/скутер",
                 "car": "🚗 Автомобиль"
             }
-            text += f"• Транспорт: {transport_map.get(application.transport, application.transport)}\n"
+            text += f"• <b>Транспорт:</b> {transport_map.get(application.transport, h(application.transport))}\n"
     
     if application.category == 'cargo':
         if application.load_capacity:
-            text += f"• Грузоподъемность: {application.load_capacity}\n"
-    
-    text += f"\n📅 **Дата подачи:** {application.created_at.strftime('%d.%m.%Y %H:%M')}\n"
-    text += f"📊 **Статус:** {application.status.value.upper()}\n"
+            text += f"• <b>Грузоподъемность:</b> {h(application.load_capacity)}\n"
+        if application.vehicle_details:
+             text += f"• <b>Детали транспорта:</b> {h(application.vehicle_details)}\n"
+
+    if application.slogan:
+        text += f"💬 <b>Слоган:</b> <i>{h(application.slogan)}</i>\n"
+
+    if application.description:
+        text += f"📝 <b>О себе:</b>\n{h(application.description)}\n"
+        
+    text += f"\n📅 <b>Дата подачи:</b> {application.created_at.strftime('%d.%m.%Y %H:%M')}\n"
+    text += f"📊 <b>Статус:</b> {h(application.status.value.upper())}\n"
     
     if application.assigned_manager_id:
-        text += f"👤 **Менеджер:** Назначен\n"
+        text += f"👤 <b>Менеджер:</b> Назначен\n"
     else:
-        text += f"👤 **Менеджер:** Не назначен\n"
+        text += f"👤 <b>Менеджер:</b> Не назначен\n"
     
     if application.processed_at:
-        text += f"⚡️ **Обработана:** {application.processed_at.strftime('%d.%m.%Y %H:%M')}\n"
-    
-    # Дополнительная информация из новых полей
-    text += f"\n📝 **Дополнительная информация:**\n"
-    
-    # Гражданство
-    if application.citizenship:
-        citizenship_map = {
-            "rf": "Гражданин РФ",
-            "eaeu": "Гражданин ЕАЭС",
-            "other": "Другое гражданство"
-        }
-        text += f"• Гражданство: {citizenship_map.get(application.citizenship, application.citizenship)}\n"
-    
-    # Статус работы
-    if application.work_status:
-        text += f"• Статус работы: {application.work_status}\n"
-    
-    # Водительские права
-    if application.has_driver_license:
-        text += f"• Водительские права: {application.has_driver_license}\n"
-    
-    # Автомобиль
-    if application.has_car:
-        text += f"• Автомобиль: {application.has_car}\n"
-    
-    # Марка и модель
-    if application.car_brand and application.car_model:
-        car_year = f" ({application.car_year} г.)" if application.car_year else ""
-        text += f"• Автомобиль: {application.car_brand} {application.car_model}{car_year}\n"
-    
-    # Класс автомобиля
-    if application.car_class:
-        text += f"• Желаемый класс: {application.car_class}\n"
-    
-    # Разрешение такси
-    if application.has_taxi_permit:
-        text += f"• Разрешение такси: {application.has_taxi_permit}\n"
-    
-    # Опыт работы
-    if application.work_experience:
-        text += f"• Опыт работы: {application.work_experience}\n"
-    
-    # Предыдущие платформы
-    if application.previous_platforms:
-        text += f"• Работал в: {application.previous_platforms}\n"
-    
-    # Медсправка
-    if application.has_medical_cert:
-        text += f"• Медсправка: {application.has_medical_cert}\n"
-    
-    # Доступные документы
-    if application.available_documents:
-        if isinstance(application.available_documents, list):
-            text += f"• Документы: {', '.join(application.available_documents)}\n"
-        elif isinstance(application.available_documents, dict):
-            text += f"• Документы: {', '.join(application.available_documents.values())}\n"
-    
-    # Курьерская информация
-    if application.category in ['courier', 'both']:
-        if application.delivery_types:
-            if isinstance(application.delivery_types, list):
-                text += f"• Категории доставки: {', '.join(application.delivery_types)}\n"
-            elif isinstance(application.delivery_types, dict):
-                text += f"• Категории доставки: {', '.join(application.delivery_types.values())}\n"
+        text += f"⚡️ <b>Обработана:</b> {application.processed_at.strftime('%d.%m.%Y %H:%M')}\n"
         
-        if application.has_thermo_bag:
-            text += f"• Термосумка: {application.has_thermo_bag}\n"
-    
-    # Грузовые перевозки
-    if application.category == 'cargo':
-        if application.truck_type:
-            text += f"• Тип кузова: {application.truck_type}\n"
-        if application.cargo_license:
-            text += f"• Права: {application.cargo_license}\n"
-    
-    # График работы
-    if application.work_schedule:
-        text += f"• График работы: {application.work_schedule}\n"
-    
-    # Удобное время
-    if application.preferred_time:
-        text += f"• Удобное время: {application.preferred_time}\n"
-    
-    # Комментарии
-    if application.comments:
-        text += f"• Комментарии: {application.comments}\n"
-    
-    # Согласия
-    if application.has_documents_confirmed:
-        text += f"• Подтверждение документов: Да\n"
-    if application.agree_terms:
-        text += f"• Согласие с условиями: Да\n"
-    if application.agree_marketing:
-        text += f"• Согласие на рассылку: Да\n"
-    
-    # Старое поле дополнительной информации (для совместимости)
-    if application.additional_info:
-        # Показываем всю дополнительную информацию без ограничений
-        info_lines = application.additional_info.split('\n')
-        for line in info_lines:
-            if line.strip():
-                text += f"• {line.strip()}\n"
-    
     if application.notes:
-        text += f"\n📝 **Заметки менеджера:**\n{application.notes}\n"
-    
+        text += f"\n🗒 <b>Заметки менеджера:</b>\n"
+        notes_list = sorted(application.notes, key=lambda note: note.created_at, reverse=True)
+        for note in notes_list:
+            note_date = note.created_at.strftime('%d.%m.%Y %H:%M')
+            text += f"  - <i>({note_date})</i>: {h(note.text)}\n"
+            
     return text
 
 def get_status_emoji(status: ApplicationStatus) -> str:
@@ -820,7 +787,7 @@ async def callback_application_note(callback: CallbackQuery):
     try:
         manager = await manager_service.get_manager_by_telegram_id(telegram_id)
         if not manager:
-            await callback.answer("❌ Вы не зарегистрированы как менеджер.")
+            await callback.answer("❌ Вы не зарегистрированы как менеджер.", parse_mode=ParseMode.HTML)
             return
         
         # Здесь можно реализовать FSM для ввода заметки
@@ -831,11 +798,12 @@ async def callback_application_note(callback: CallbackQuery):
             f"Используйте команды для работы с заявкой.",
             reply_markup=InlineKeyboardMarkup(inline_keyboard=[
                 [InlineKeyboardButton(text="◀️ Назад к заявке", callback_data=f"app_details_{app_id}")]
-            ])
+            ]),
+            parse_mode=ParseMode.HTML
         )
     except Exception as e:
         logger.error(f"❌ Ошибка добавления заметки: {e}")
-        await callback.answer("❌ Произошла ошибка.")
+        await callback.answer("❌ Произошла ошибка.", parse_mode=ParseMode.HTML)
 
 @application_router.callback_query(F.data == "next_application")
 async def callback_next_application(callback: CallbackQuery):
@@ -846,14 +814,14 @@ async def callback_next_application(callback: CallbackQuery):
     try:
         manager = await manager_service.get_manager_by_telegram_id(telegram_id)
         if not manager:
-            await callback.answer("❌ Вы не зарегистрированы как менеджер.")
+            await callback.answer("❌ Вы не зарегистрированы как менеджер.", parse_mode=ParseMode.HTML)
             return
         
         # Получаем следующую новую заявку
         applications = await manager_service.get_available_new_applications(limit=5)
         
         if not applications:
-            await callback.answer("📋 Больше нет новых заявок")
+            await callback.answer("📋 Больше нет новых заявок", parse_mode=ParseMode.HTML)
             return
         
         # Показываем вторую заявку (следующую)
@@ -882,9 +850,9 @@ async def callback_next_application(callback: CallbackQuery):
             
             keyboard = InlineKeyboardMarkup(inline_keyboard=keyboard_buttons)
             
-            await callback.message.edit_text(text, reply_markup=keyboard)
+            await callback.message.edit_text(text, reply_markup=keyboard, parse_mode=ParseMode.HTML)
         else:
-            await callback.answer("📋 Это была последняя новая заявка")
+            await callback.answer("📋 Это была последняя новая заявка", parse_mode=ParseMode.HTML)
     except Exception as e:
         logger.error(f"❌ Ошибка получения следующей заявки: {e}")
-        await callback.answer("❌ Произошла ошибка.") 
+        await callback.answer("❌ Произошла ошибка.", parse_mode=ParseMode.HTML) 
