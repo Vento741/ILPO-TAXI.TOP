@@ -401,21 +401,24 @@ async def callback_application_details(callback: CallbackQuery):
             text = format_application_details(application)
             
             # Определяем доступные действия с заявкой
-            is_assigned_to_manager = application.assigned_manager_id == manager.id
+            is_assigned_to_current_manager = application.assigned_manager_id == manager.id
             is_new = application.status == ApplicationStatus.NEW and not application.assigned_manager_id
-            is_in_progress = application.status in [ApplicationStatus.ASSIGNED, ApplicationStatus.IN_PROGRESS]
+            is_in_progress_by_current_manager = is_assigned_to_current_manager and application.status in [
+                ApplicationStatus.ASSIGNED, 
+                ApplicationStatus.IN_PROGRESS
+            ]
             
             # Формируем клавиатуру с действиями
             keyboard_buttons = []
             
-            # Кнопка "Взять в работу" для новых заявок
+            # Кнопка "Взять в работу" для новых, свободных заявок
             if is_new or (manager.is_admin and not application.assigned_manager_id):
                 keyboard_buttons.append([
                     InlineKeyboardButton(text="✅ Взять в работу", callback_data=f"app_take_{app_id}")
                 ])
             
-            # Кнопки для заявок в работе
-            if is_assigned_to_manager and is_in_progress:
+            # Кнопки для заявок в работе у ТЕКУЩЕГО менеджера
+            if is_in_progress_by_current_manager:
                 keyboard_buttons.append([
                     InlineKeyboardButton(text="📞 Контакты клиента", callback_data=f"app_contact_{app_id}")
                 ])
