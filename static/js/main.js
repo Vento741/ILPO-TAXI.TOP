@@ -3,6 +3,65 @@
  * Интерактивность для сайта таксопарка с ИИ-консультантом (OpenRouter API)
  */
 
+// Яндекс.Метрика - Событийная аналитика
+function trackEvent(eventName, params = {}) {
+    if (typeof ym !== 'undefined') {
+        ym(101852978, 'reachGoal', eventName, params);
+        console.log('YM Event tracked:', eventName, params);
+    }
+}
+
+// SEO Events tracking functions
+function trackPhoneClick() {
+    trackEvent('PHONE_CLICK', {
+        'phone_number': '+7-927-374-81-51',
+        'source': 'website'
+    });
+}
+
+function trackChatOpen() {
+    trackEvent('CHAT_OPEN', {
+        'chat_type': 'ai_consultant',
+        'source': 'website'
+    });
+}
+
+function trackSignupClick() {
+    const section = document.activeElement.closest('section');
+    trackEvent('SIGNUP_CLICK', {
+        'button_location': section ? section.id || 'unknown' : 'unknown',
+        'source': 'website'
+    });
+}
+
+function trackCalculatorUse() {
+    trackEvent('CALCULATOR_USE', {
+        'tool': 'earnings_calculator',
+        'source': 'website'
+    });
+}
+
+function trackManagerTransfer() {
+    trackEvent('MANAGER_TRANSFER', {
+        'from': 'ai_chat',
+        'to': 'human_manager'
+    });
+}
+
+function trackFormSubmit(formType) {
+    trackEvent('FORM_SUBMIT', {
+        'form_type': formType,
+        'source': 'website'
+    });
+}
+
+function trackSectionView(sectionName) {
+    trackEvent('SECTION_VIEW', {
+        'section': sectionName,
+        'source': 'website'
+    });
+}
+
 // Глобальные переменные
 let chatWidget = null;
 let chatToggle = null;
@@ -169,6 +228,9 @@ function handleTouchEnd(event) {
 // Открытие чата
 function openChat() {
     if (!chatWidget || !chatToggle) return;
+
+    // Трекинг события открытия чата
+    trackChatOpen();
 
     chatWidget.classList.add('open');
     chatToggle.classList.add('hidden');
@@ -1427,6 +1489,9 @@ document.addEventListener('DOMContentLoaded', initCTAButtons);
 
 // Функция переключения на живого менеджера
 async function requestManagerTransfer() {
+    // Трекинг события перевода на менеджера
+    trackManagerTransfer();
+
     const transferBtn = document.getElementById('transferToManagerBtn');
 
     // Сначала запрашиваем данные клиента

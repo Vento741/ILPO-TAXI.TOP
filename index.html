@@ -3,9 +3,33 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>ILPO-TAXI - Умный Таксопарк - Подключение к Яндекс.Такси с ИИ-консультантом</title>
-    <meta name="description" content="Первый умный таксопарк с ИИ-агентом. Подключайтесь к Яндекс.Такси за 24 часа. Круглосуточная поддержка ИИ-консультанта.">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ILPO-TAXI - Умный Таксопарк с AI-агентом и менеджерами 24/7</title>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/static/images/favicon-96x96.png" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="/static/images/favicon.svg" />
+    <link rel="shortcut icon" href="/static/images/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/images/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-title" content="ILPO-TAXI" />
+    <link rel="manifest" href="/static/images/site.webmanifest" />
+
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="Подключитесь к Яндекс.Такси и Доставке через ILPO-TAXI - первый таксопарк с умным ИИ-консультантом. Быстрое подключение, минимальные комиссии, круглосуточная поддержка.">
+    <meta name="keywords" content="яндекс такси, работа в такси, подключение к такси, таксопарк пенза, ilpo-taxi, ии-консультант, яндекс доставка, работа курьером">
+
+    <!-- Advanced SEO Meta Tags -->
+    <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
+    <meta name="author" content="ILPO-TAXI">
+    <meta name="theme-color" content="#007bff">
+    <meta name="msapplication-TileColor" content="#007bff">
+    <link rel="canonical" href="https://ilpo-taxi.top/">
+
+    <!-- Yandex Verification -->
+    <meta name="yandex-verification" content="08fdc069ff38aa30" />
+
+    <!-- Google Verification (заменить на актуальный код верификации) -->
+    <meta name="google-site-verification" content="your-google-verification-code" />
 
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -25,25 +49,165 @@
     <link rel="stylesheet" href="static/css/adaptive767px.css">
     <link rel="stylesheet" href="static/css/adaptive340_460px.css">
 
-    <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="static/images/favicon.ico">
-
     <!-- Open Graph -->
-    <meta property="og:title" content="Умный Таксопарк - ilpo-taxi.top">
+    <meta property="og:title" content="ILPO-TAXI - Умный Таксопарк с AI-агентом и менеджерами 24/7">
     <meta property="og:description" content="Первый умный таксопарк с ИИ-агентом. Подключайтесь к Яндекс.Такси за 24 часа.">
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://ilpo-taxi.top">
+    <meta property="og:url" content="https://ilpo-taxi.top/">
+    <meta property="og:site_name" content="ILPO-TAXI">
+    <meta property="og:locale" content="ru_RU">
+    <meta property="og:image" content="https://ilpo-taxi.top/static/images/web-app-manifest-512x512.png">
+    <meta property="og:image:alt" content="ILPO-TAXI - Умный таксопарк">
+    <meta property="og:image:width" content="512">
+    <meta property="og:image:height" content="512">
 
-    <!-- Structured Data -->
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="ILPO-TAXI - Умный Таксопарк с AI-агентом">
+    <meta name="twitter:description" content="Первый умный таксопарк с ИИ-агентом. Подключайтесь к Яндекс.Такси за 24 часа.">
+    <meta name="twitter:image" content="https://ilpo-taxi.top/static/images/web-app-manifest-512x512.png">
+
+    <!-- Structured Data - Organization -->
     <script type="application/ld+json">
         {
             "@context": "https://schema.org",
             "@type": "Organization",
-            "name": "Умный Таксопарк",
+            "name": "ILPO-TAXI",
+            "legalName": "Умный Таксопарк ILPO-TAXI",
             "url": "https://ilpo-taxi.top",
-            "description": "Первый умный таксопарк с ИИ-агентом для подключения к Яндекс.Такси"
+            "logo": "https://ilpo-taxi.top/static/images/web-app-manifest-512x512.png",
+            "description": "Первый умный таксопарк с ИИ-агентом для подключения к Яндекс.Такси и Доставке",
+            "telephone": "+7-927-374-81-51",
+            "address": {
+                "@type": "PostalAddress",
+                "streetAddress": "ул. Калинина 128А к2",
+                "addressLocality": "Пенза",
+                "addressCountry": "RU"
+            },
+            "contactPoint": {
+                "@type": "ContactPoint",
+                "telephone": "+7-927-374-81-51",
+                "contactType": "customer service",
+                "availableLanguage": "Russian",
+                "areaServed": "RU"
+            },
+            "sameAs": [
+                "https://wa.me/79273748151"
+            ],
+            "openingHours": "Mo-Su 00:00-23:59",
+            "serviceArea": {
+                "@type": "Place",
+                "name": "Россия"
+            },
+            "hasOfferCatalog": {
+                "@type": "OfferCatalog",
+                "name": "Услуги таксопарка",
+                "itemListElement": [{
+                    "@type": "Offer",
+                    "itemOffered": {
+                        "@type": "Service",
+                        "name": "Подключение к Яндекс.Такси",
+                        "description": "Быстрое подключение водителей к Яндекс.Такси"
+                    }
+                }, {
+                    "@type": "Offer",
+                    "itemOffered": {
+                        "@type": "Service",
+                        "name": "Подключение к Яндекс.Доставке",
+                        "description": "Подключение курьеров к Яндекс.Доставке"
+                    }
+                }]
+            }
         }
     </script>
+
+    <!-- Structured Data - LocalBusiness -->
+    <script type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "LocalBusiness",
+            "name": "ILPO-TAXI",
+            "image": "https://ilpo-taxi.top/static/images/web-app-manifest-512x512.png",
+            "telephone": "+7-927-374-81-51",
+            "address": {
+                "@type": "PostalAddress",
+                "streetAddress": "ул. Калинина 128А к2",
+                "addressLocality": "Пенза",
+                "addressCountry": "RU"
+            },
+            "geo": {
+                "@type": "GeoCoordinates",
+                "latitude": "53.2001",
+                "longitude": "45.0047"
+            },
+            "url": "https://ilpo-taxi.top",
+            "openingHours": "Mo-Su 00:00-23:59",
+            "priceRange": "₽₽",
+            "aggregateRating": {
+                "@type": "AggregateRating",
+                "ratingValue": "4.9",
+                "reviewCount": "247"
+            }
+        }
+    </script>
+
+    <!-- Structured Data - FAQ -->
+    <script type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            "mainEntity": [{
+                "@type": "Question",
+                "name": "Какие документы нужны для подключения к Яндекс.Такси?",
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "Для водителей такси: паспорт гражданина РФ, водительское удостоверение, СТС автомобиля, диагностическая карта. Для курьеров: паспорт гражданина РФ, справка о несудимости, медицинская справка."
+                }
+            }, {
+                "@type": "Question",
+                "name": "Какой процент берет таксопарк ILPO-TAXI?",
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "Мы предлагаем одну из самых низких комиссий на рынке - от 1.5% для всех водителей."
+                }
+            }, {
+                "@type": "Question",
+                "name": "Как быстро можно начать работать?",
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "Курьеры могут начать работать через 2-4 часа после подачи заявки, водители - через 24 часа. Это самые быстрые сроки подключения в городе."
+                }
+            }]
+        }
+    </script>
+
+    <!-- Yandex.Metrika counter -->
+    <script type="text/javascript">
+        (function(m, e, t, r, i, k, a) {
+            m[i] = m[i] || function() {
+                (m[i].a = m[i].a || []).push(arguments)
+            };
+            m[i].l = 1 * new Date();
+            for (var j = 0; j < document.scripts.length; j++) {
+                if (document.scripts[j].src === r) {
+                    return;
+                }
+            }
+            k = e.createElement(t), a = e.getElementsByTagName(t)[0], k.async = 1, k.src = r, a.parentNode.insertBefore(k, a)
+        })
+        (window, document, "script", "https://mc.yandex.ru/metrika/tag.js", "ym");
+
+        ym(101852978, "init", {
+            clickmap: true,
+            trackLinks: true,
+            accurateTrackBounce: true,
+            webvisor: true,
+            trackHash: true,
+            ecommerce: "dataLayer"
+        });
+    </script>
+    <noscript><div><img src="https://mc.yandex.ru/watch/101852978" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
+    <!-- /Yandex.Metrika counter -->
 </head>
 
 <body>
@@ -121,7 +285,7 @@
                                 <li><i class="fas fa-tachometer-alt"></i> Самое быстрое подключение в отрасли</li>
                                 <li><i class="fas fa-robot"></i> Круглосуточный ИИ-помощник на каждом этапе</li>
                             </ul>
-                            <a href="/signup" class="btn btn-primary btn-lg w-100 signup-promo-btn">
+                            <a href="/signup" class="btn btn-primary btn-lg w-100 signup-promo-btn" onclick="trackSignupClick()">
                                 <i class="fas fa-rocket"></i> Начать регистрацию
                             </a>
                             <div class="promo-footer">
@@ -1233,7 +1397,7 @@
                             <p>Наш ИИ-консультант ответит на любые вопросы в режиме 24/7</p>
                             <div class="faq-cta-buttons">
                                 <button class="btn btn-primary me-3" onclick="openChat()">💬 Задать вопрос ИИ</button>
-                                <a href="tel:+79273748151" class="btn btn-outline-primary">📞 Позвонить менеджеру</a>
+                                <a href="tel:+79273748151" onclick="trackPhoneClick()">📞 Позвонить менеджеру</a>
                             </div>
                         </div>
                     </div>
@@ -1278,10 +1442,10 @@
                         <div class="footer-section">
                             <h5 class="footer-title">🚗 Услуги</h5>
                             <ul class="footer-links">
-                                <li><a href="/signup">Яндекс.Такси</a></li>
-                                <li><a href="/signup">Яндекс.Доставка</a></li>
-                                <li><a href="/signup">Работа курьером</a></li>
-                                <li><a href="#calculator">Калькулятор заработка</a></li>
+                                <li><a href="/signup" onclick="trackSignupClick()">Яндекс.Такси</a></li>
+                                <li><a href="/signup" onclick="trackSignupClick()">Яндекс.Доставка</a></li>
+                                <li><a href="/signup" onclick="trackSignupClick()">Работа курьером</a></li>
+                                <li><a href="#calculator" onclick="trackCalculatorUse()">Калькулятор заработка</a></li>
                             </ul>
                         </div>
                     </div>
@@ -1317,7 +1481,7 @@
                                     <div class="contact-icon">📱</div>
                                     <div class="contact-info">
                                         <strong>Телефон</strong>
-                                        <a href="tel:+79273748151">+7 (927) 374-81-51</a>
+                                        <a href="tel:+79273748151" onclick="trackPhoneClick()">+7 (927) 374-81-51</a>
                                         <a href="https://wa.me/79273748151">WhatsApp (нажмите)</a>
                                         <small>Круглосуточно</small>
                                     </div>

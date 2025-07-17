@@ -1,0 +1,38 @@
+User-agent: *
+Allow: /
+
+# Основные страницы для индексации
+Allow: /signup
+Allow: /privacy-policy
+Allow: /user-agreement
+
+# Статические ресурсы
+Allow: /static/css/
+Allow: /static/js/
+Allow: /static/images/
+
+# Запрещаем служебные файлы
+Disallow: /env-ilpotaxi/
+Disallow: /database/
+Disallow: /routers/
+Disallow: /services/
+Disallow: /telegram_bot/
+Disallow: /*.py$
+Disallow: /*.pyc$
+Disallow: /test_*
+Disallow: /fix_*
+
+# Карта сайта
+Sitemap: https://ilpo-taxi.top/sitemap.xml
+
+# Время краулинга (рекомендуемая задержка в секундах)
+Crawl-delay: 1
+
+# Специфические настройки для разных поисковиков
+User-agent: Yandex
+Allow: /
+Crawl-delay: 1
+
+User-agent: Googlebot
+Allow: /
+Crawl-delay: 1 

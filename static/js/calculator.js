@@ -283,6 +283,11 @@ class EarningsCalculator {
     }
 
     calculateEarnings() {
+        // Трекинг использования калькулятора
+        if (typeof trackCalculatorUse === 'function') {
+            trackCalculatorUse();
+        }
+
         const city = CITY_DATA[this.currentCity];
         const jobType = JOB_TYPES[this.currentJobType];
 
