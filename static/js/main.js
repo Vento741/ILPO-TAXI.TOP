@@ -980,18 +980,62 @@ window.forceReconnect = forceReconnect;
    НОВЫЕ ИНТЕРАКТИВНЫЕ ФУНКЦИИ ДЛЯ BENEFITS И PROCESS
    ============================================================================= */
 
-// Инициализация Swiper для Benefits
-function initBenefitsSwiper() {
-    const benefitsSwiper = new Swiper('.benefits-swiper', {
-        slidesPerView: 1,
-        spaceBetween: 20, // Уменьшаем отступы для мобильных
+// Универсальная функция инициализации Swiper
+function initSwiper(containerSelector, config) {
+    const swiperInstance = new Swiper(containerSelector, {
+        // Базовые настройки
         loop: true,
-        speed: 600, // Ускоряем анимацию переключения для мобильных
+        speed: 600,
+        grabCursor: true,
+        watchOverflow: true,
+
+        // Автопрокрутка
         autoplay: {
-            delay: 4000, // Уменьшаем задержку автопрокрутки
-            disableOnInteraction: false,
-            pauseOnMouseEnter: true, // Пауза при наведении
+            delay: 4500,
+            disableOnInteraction: false, // Автопрокрутка будет возобновляться после взаимодействия
+            pauseOnMouseEnter: true, // Пауза при наведении курсора на десктопе
         },
+
+        // Ленивая загрузка
+        preloadImages: false,
+        lazy: true,
+
+        // Переданные настройки (slidesPerView, breakpoints, pagination, navigation)
+        ...config,
+
+        // Оптимизация производительности
+        roundLengths: true,
+
+        // Исправление проблем с touch-событиями
+        touchRatio: 1,
+        touchAngle: 45,
+        simulateTouch: true, // Для совместимости с десктопом
+        allowTouchMove: true,
+
+        // Убираем ручное управление autoplay, которое вызывает проблемы
+        on: {
+            // Можно добавить обработчики, если нужно, но без управления autoplay
+        }
+    });
+
+    // Добавляем обработчик изменения ориентации для мобильных
+    if (window.innerWidth < 768) {
+        window.addEventListener('orientationchange', () => {
+            setTimeout(() => {
+                swiperInstance.update();
+            }, 150);
+        });
+    }
+}
+
+// Вызов DOMContentLoaded
+document.addEventListener('DOMContentLoaded', () => {
+    const isMobile = window.innerWidth < 768;
+
+    // Настройки для свайпера "Преимущества"
+    initSwiper('.benefits-swiper', {
+        slidesPerView: 1,
+        spaceBetween: 20,
         pagination: {
             el: '.benefits-pagination',
             clickable: true,
@@ -1002,129 +1046,17 @@ function initBenefitsSwiper() {
             prevEl: '.benefits-prev',
         },
         breakpoints: {
-            480: {
-                slidesPerView: 1,
-                spaceBetween: 20,
-            },
-            768: {
-                slidesPerView: 2,
-                spaceBetween: 25,
-            },
-            1024: {
-                slidesPerView: 2,
-                spaceBetween: 30,
-            },
-            1200: {
-                slidesPerView: 3,
-                spaceBetween: 30,
-            }
-        },
-        effect: 'slide',
-        grabCursor: true, // Курсор-рука при наведении
-        watchOverflow: true,
-        touchRatio: 1, // Чувствительность свайпа
-        touchAngle: 45, // Угол свайпа
-        simulateTouch: true, // Включаем симуляцию touch
-        touchMoveStopPropagation: false, // Не блокируем скролл страницы
-        allowTouchMove: true, // Разрешаем touch движения
-        touchStartPreventDefault: false, // Не блокируем стандартное поведение
-        // Оптимизация для мобильных
-        roundLengths: true, // Округляем длины для лучшей производительности
-        preloadImages: false, // Не предзагружаем все изображения
-        lazy: true, // Ленивая загрузка
-        centeredSlides: false,
-        slidesOffsetBefore: 0,
-        slidesOffsetAfter: 0,
-        // Дополнительные настройки для touch
-        touchEventsTarget: 'container',
-        preventInteractionOnTransition: false,
-        on: {
-            slideChange: function() {
-                // Добавляем эффект при смене слайда только на десктопе
-                if (!isMobile) {
-                    const activeSlide = this.slides[this.activeIndex];
-                    if (activeSlide) {
-                        const icon = activeSlide.querySelector('.icon-glow');
-                        if (icon) {
-                            icon.style.animation = 'none';
-                            setTimeout(() => {
-                                icon.style.animation = '';
-                            }, 100);
-                        }
-                    }
-                }
-            },
-            init: function() {
-                // Улучшенная инициализация для мобильных
-                const container = document.querySelector('.benefits-swiper-container');
-                if (container) {
-                    // Добавляем class для CSS оптимизаций
-                    container.classList.add('swiper-initialized');
-
-                    // Обработчики для мобильных устройств
-                    if (isMobile) {
-                        this.allowTouchMove = true;
-                        this.touchEventsTarget = 'container';
-
-                        // Отключаем автопрокрутку при взаимодействии
-                        container.addEventListener('touchstart', () => {
-                            if (this.autoplay) {
-                                this.autoplay.stop();
-                            }
-                        });
-
-                        container.addEventListener('touchend', () => {
-                            if (this.autoplay) {
-                                setTimeout(() => {
-                                    this.autoplay.start();
-                                }, 3000);
-                            }
-                        });
-                    }
-                }
-            },
-            touchStart: function() {
-                // Останавливаем автопрокрутку при начале touch
-                if (this.autoplay) {
-                    this.autoplay.stop();
-                }
-            },
-            touchEnd: function() {
-                // Возобновляем автопрокрутку после touch
-                if (this.autoplay) {
-                    setTimeout(() => {
-                        this.autoplay.start();
-                    }, 2000);
-                }
-            }
+            480: { slidesPerView: 1, spaceBetween: 20 },
+            768: { slidesPerView: 2, spaceBetween: 25 },
+            1024: { slidesPerView: 2, spaceBetween: 30 },
+            1200: { slidesPerView: 3, spaceBetween: 30 }
         }
     });
 
-    // Дополнительная оптимизация для мобильных
-    if (isMobile) {
-        // Добавляем обработчик изменения ориентации
-        window.addEventListener('orientationchange', () => {
-            setTimeout(() => {
-                if (benefitsSwiper) {
-                    benefitsSwiper.update();
-                }
-            }, 100);
-        });
-    }
-}
-
-// Инициализация Swiper для Reviews
-function initReviewsSwiper() {
-    const reviewsSwiper = new Swiper('.reviews-swiper', {
+    // Настройки для свайпера "Отзывы"
+    initSwiper('.reviews-swiper', {
         slidesPerView: 1,
-        spaceBetween: 20, // Уменьшаем отступы для мобильных
-        loop: true,
-        speed: 500, // Ускоряем анимацию переключения для мобильных
-        autoplay: {
-            delay: 5000, // Уменьшаем задержку автопрокрутки
-            disableOnInteraction: false,
-            pauseOnMouseEnter: true, // Пауза при наведении
-        },
+        spaceBetween: 20,
         pagination: {
             el: '.reviews-pagination',
             clickable: true,
@@ -1135,116 +1067,23 @@ function initReviewsSwiper() {
             prevEl: '.reviews-prev',
         },
         breakpoints: {
-            480: {
-                slidesPerView: 1,
-                spaceBetween: 20,
-            },
-            768: {
-                slidesPerView: 2,
-                spaceBetween: 25,
-            },
-            1024: {
-                slidesPerView: 2,
-                spaceBetween: 30,
-            },
-            1200: {
-                slidesPerView: 3,
-                spaceBetween: 30,
-            }
-        },
-        effect: 'slide',
-        grabCursor: true, // Курсор-рука при наведении
-        watchOverflow: true,
-        touchRatio: 1, // Чувствительность свайпа
-        touchAngle: 45, // Угол свайпа
-        simulateTouch: true, // Включаем симуляцию touch
-        touchMoveStopPropagation: false, // Не блокируем скролл страницы
-        allowTouchMove: true, // Разрешаем touch движения
-        touchStartPreventDefault: false, // Не блокируем стандартное поведение
-        // Оптимизация для мобильных
-        roundLengths: true, // Округляем длины для лучшей производительности
-        preloadImages: false, // Не предзагружаем все изображения
-        lazy: true, // Ленивая загрузка
-        centeredSlides: false,
-        slidesOffsetBefore: 0,
-        slidesOffsetAfter: 0,
-        // Дополнительные настройки для touch
-        touchEventsTarget: 'container',
-        preventInteractionOnTransition: false,
-        on: {
-            slideChange: function() {
-                // Добавляем эффект при смене слайда только на десктопе
-                if (!isMobile) {
-                    const activeSlide = this.slides[this.activeIndex];
-                    if (activeSlide) {
-                        const icon = activeSlide.querySelector('.icon-glow');
-                        if (icon) {
-                            icon.style.animation = 'none';
-                            setTimeout(() => {
-                                icon.style.animation = '';
-                            }, 100);
-                        }
-                    }
-                }
-            },
-            init: function() {
-                // Улучшенная инициализация для мобильных
-                const container = document.querySelector('.reviews-swiper-container');
-                if (container) {
-                    // Добавляем class для CSS оптимизаций
-                    container.classList.add('swiper-initialized');
-
-                    // Обработчики для мобильных устройств
-                    if (isMobile) {
-                        this.allowTouchMove = true;
-                        this.touchEventsTarget = 'container';
-
-                        // Отключаем автопрокрутку при взаимодействии
-                        container.addEventListener('touchstart', () => {
-                            if (this.autoplay) {
-                                this.autoplay.stop();
-                            }
-                        });
-
-                        container.addEventListener('touchend', () => {
-                            if (this.autoplay) {
-                                setTimeout(() => {
-                                    this.autoplay.start();
-                                }, 3000);
-                            }
-                        });
-                    }
-                }
-            },
-            touchStart: function() {
-                // Останавливаем автопрокрутку при начале touch
-                if (this.autoplay) {
-                    this.autoplay.stop();
-                }
-            },
-            touchEnd: function() {
-                // Возобновляем автопрокрутку после touch
-                if (this.autoplay) {
-                    setTimeout(() => {
-                        this.autoplay.start();
-                    }, 2000);
-                }
-            }
+            480: { slidesPerView: 1, spaceBetween: 20 },
+            768: { slidesPerView: 2, spaceBetween: 25 },
+            1024: { slidesPerView: 2, spaceBetween: 30 },
+            1200: { slidesPerView: 3, spaceBetween: 30 }
         }
     });
 
-    // Дополнительная оптимизация для мобильных
-    if (isMobile) {
-        // Добавляем обработчик изменения ориентации
-        window.addEventListener('orientationchange', () => {
-            setTimeout(() => {
-                if (reviewsSwiper) {
-                    reviewsSwiper.update();
-                }
-            }, 100);
-        });
-    }
-}
+    initProcessTabs();
+    initCounterAnimations();
+    initScrollAnimations();
+    initScrollToTop();
+    initShrinkHeader();
+    initPageVisibilityHandling();
+    initChatSwipeGestures();
+
+    console.log('🚀 ILPO-TAXI инициализирован с OpenRouter AI');
+});
 
 // Переключение табов в Process секции
 function initProcessTabs() {
