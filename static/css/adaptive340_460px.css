@@ -574,12 +574,22 @@
         padding: 0.2rem;
     }
     .chat-body {
-        height: calc(100% - 190px);
+        height: calc(100% - 150px);
+        /* Уменьшаем вычет с 190px до 150px */
         padding: 0.6rem;
     }
     .chat-message {
-        margin-bottom: 0.6rem;
+        margin-bottom: 0.8rem;
+        /* Увеличиваем отступ между сообщениями */
         max-width: 85%;
+    }
+    /* Стили для индикатора печатания */
+    .typing-indicator {
+        position: relative;
+        z-index: 10;
+        margin-bottom: 0.8rem !important;
+        max-width: 85% !important;
+        animation: fadeInUp 0.3s ease-out forwards;
     }
     .ai-message .message-content {
         font-size: 0.9rem;

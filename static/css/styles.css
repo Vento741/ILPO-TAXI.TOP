@@ -3456,26 +3456,28 @@ p {
    ============================================================================= */
 
 .chat-widget {
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+    width: 380px;
+    height: 650px;
+    /* Увеличиваем высоту с 500px до 600px */
     position: fixed;
-    bottom: 24px;
-    right: 24px;
-    width: 400px;
-    height: 600px;
+    bottom: 20px;
+    right: 20px;
     background: var(--yandex-white);
-    border-radius: var(--border-radius-lg);
-    box-shadow: 0 12px 48px rgba(33, 32, 31, 0.2);
-    border: 2px solid var(--yandex-yellow);
-    overflow: hidden;
+    border-radius: var(--border-radius);
+    display: flex;
+    flex-direction: column;
+    transform: translateY(calc(100% + 20px));
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
     z-index: 1000;
-    transition: var(--transition);
-    transform: translateY(100%);
-    opacity: 0;
-    will-change: transform, opacity;
+    overflow: hidden;
 }
 
 .chat-widget.open {
     transform: translateY(0);
-    opacity: 1;
 }
 
 .chat-header {
@@ -4365,6 +4367,11 @@ p {
         width: 5px;
         height: 5px;
     }
+    /* Увеличиваем высоту чат-виджета на мобильных устройствах */
+    .chat-widget.open {
+        height: 95vh !important;
+        /* Используем больше высоты экрана */
+    }
 }
 
 
@@ -4914,4 +4921,21 @@ p {
 .faq-cta-buttons a:active {
     transform: translateY(0);
     box-shadow: 0 2px 8px rgba(33, 32, 31, 0.2);
+}
+
+.typing-indicator {
+    position: relative;
+    z-index: 10;
+    margin-bottom: 0.5rem !important;
+    max-width: 80% !important;
+    animation: fadeInUp 0.3s ease-out forwards;
+}
+
+.typing-indicator .message-content {
+    background: linear-gradient(135deg, #F5F5F7 0%, #FAFAFA 100%);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    padding: 0.75rem 1rem;
+    position: relative;
+    border-radius: 0 15px 15px 15px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }

@@ -489,6 +489,11 @@ function sendMessage() {
     // Очищаем поле ввода
     chatInput.value = '';
 
+    // Показываем индикатор печатания сразу после отправки сообщения
+    setTimeout(() => {
+        showTypingIndicator();
+    }, 300);
+
     trackEvent('message_sent', {
         message_length: message.length,
         session_id: sessionId
@@ -645,6 +650,14 @@ function showTypingIndicator() {
     `;
     chatBody.appendChild(typingDiv);
     chatBody.scrollTop = chatBody.scrollHeight;
+
+    // Добавляем дополнительную проверку видимости индикатора
+    setTimeout(() => {
+        if (typingDiv && typingDiv.parentNode) {
+            // Убедимся, что индикатор видим
+            chatBody.scrollTop = chatBody.scrollHeight;
+        }
+    }, 100);
 }
 
 // Скрыть индикатор печати
