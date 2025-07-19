@@ -3694,6 +3694,7 @@ p {
 
 .ai-message .message-time {
     text-align: left;
+    margin-bottom: 30px;
 }
 
 .chat-input {
