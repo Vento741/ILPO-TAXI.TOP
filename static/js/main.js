@@ -89,15 +89,15 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeNavigation();
 
     // Задержка инициализации свайперов для мобильных устройств
-    if (isMobile) {
-        setTimeout(() => {
-            initBenefitsSwiper();
-            initReviewsSwiper();
-        }, 100);
-    } else {
-        initBenefitsSwiper();
-        initReviewsSwiper();
-    }
+    // if (isMobile) {
+    //     setTimeout(() => {
+    //         initBenefitsSwiper();
+    //         initReviewsSwiper();
+    //     }, 100);
+    // } else {
+    //     initBenefitsSwiper();
+    //     initReviewsSwiper();
+    // }
 
     initProcessTabs();
     initCounterAnimations();
