@@ -4314,6 +4314,8 @@ p {
     position: relative;
     border-radius: 0 15px 15px 15px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    margin-top: -5px;
+    /* Поднимаем индикатор печатания выше */
 }
 
 .typing-dots {
@@ -4929,13 +4931,4 @@ p {
     margin-bottom: 0.5rem !important;
     max-width: 80% !important;
     animation: fadeInUp 0.3s ease-out forwards;
-}
-
-.typing-indicator .message-content {
-    background: linear-gradient(135deg, #F5F5F7 0%, #FAFAFA 100%);
-    border: 1px solid rgba(0, 0, 0, 0.05);
-    padding: 0.75rem 1rem;
-    position: relative;
-    border-radius: 0 15px 15px 15px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
