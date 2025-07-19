@@ -86,3 +86,5 @@ cursor-memory-bank-main/
 # Documentation files
 /docs/
 # /database/
+
+test_openrouter.py
