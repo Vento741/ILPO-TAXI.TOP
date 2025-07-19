@@ -4886,3 +4886,32 @@ p {
         max-width: 95%;
     }
 }
+
+
+/* Стиль для кнопки "Позвонить менеджеру" */
+
+.faq-cta-buttons a {
+    background: var(--yandex-white);
+    border: 2px solid var(--yandex-black);
+    color: var(--yandex-black);
+    font-weight: 600;
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--border-radius-sm);
+    text-decoration: none;
+    transition: var(--transition);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.faq-cta-buttons a:hover {
+    background: var(--yandex-black);
+    color: var(--yandex-white);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(33, 32, 31, 0.3);
+}
+
+.faq-cta-buttons a:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(33, 32, 31, 0.2);
+}
