@@ -2208,16 +2208,22 @@ p {
     position: relative;
     margin: 3rem 0;
     padding: 0 20px;
+    touch-action: pan-y; /* Улучшает обработку жестов на мобильных устройствах */
 }
 
 .reviews-swiper {
     padding: 20px 0 40px;
     overflow: visible;
+    will-change: transform; /* Оптимизация производительности */
+    -webkit-backface-visibility: hidden; /* Исправляет проблемы с рендерингом на iOS */
+    backface-visibility: hidden;
 }
 
 .reviews-swiper .swiper-slide {
     height: auto;
     display: flex;
+    -webkit-transform: translate3d(0, 0, 0); /* Исправляет проблемы с рендерингом на iOS */
+    transform: translate3d(0, 0, 0);
 }
 
 .review-card {

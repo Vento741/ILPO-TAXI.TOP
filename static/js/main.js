@@ -1141,6 +1141,11 @@ document.addEventListener('DOMContentLoaded', () => {
             nextEl: '.reviews-next',
             prevEl: '.reviews-prev',
         },
+        // Улучшенные настройки для мобильных устройств
+        touchReleaseOnEdges: true,
+        touchMoveStopPropagation: true,
+        resistanceRatio: 0.65,  // Уменьшаем сопротивление для более плавного свайпа
+        threshold: 5,  // Уменьшаем порог для распознавания свайпа
         breakpoints: {
             480: { slidesPerView: 1, spaceBetween: 20 },
             768: { slidesPerView: 2, spaceBetween: 25 },
