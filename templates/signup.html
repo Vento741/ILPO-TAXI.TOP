@@ -5,6 +5,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Подключение к ILPO-TAXI - Стать водителем или курьером</title>
+    
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="Подключитесь к Яндекс.Такси и Доставке через ILPO-TAXI. Станьте водителем или курьером с минимальной комиссией, быстрым подключением и круглосуточной поддержкой.">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://ilpo-taxi.top/signup">
+    
     <link rel="stylesheet" href="/static/css/signup.css">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -504,6 +510,27 @@
     </div>
 
     <script src="/static/js/signup.js"></script>
+    <script src="/static/js/metrika-goals.js"></script>
+    
+    <!-- Инициализация отслеживания событий для Яндекс Метрики -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Отслеживание клика по телефону
+            const phoneLinks = document.querySelectorAll('a[href^="tel:"]');
+            phoneLinks.forEach(function(link) {
+                link.addEventListener('click', function() {
+                    if (typeof ym !== 'undefined') {
+                        ym(101852978, 'reachGoal', 'PHONE_CLICK');
+                    }
+                });
+            });
+            
+            // Отслеживание посещения страницы регистрации
+            if (typeof ym !== 'undefined') {
+                ym(101852978, 'reachGoal', 'SIGNUP_PAGE_VIEW');
+            }
+        });
+    </script>
 </body>
 
 </html>

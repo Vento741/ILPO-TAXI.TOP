@@ -24,6 +24,12 @@ function initializeEventListeners() {
         const selectBtn = card.querySelector('.select-btn');
         selectBtn.addEventListener('click', () => {
             selectedCategory = card.dataset.category;
+            
+            // Отслеживаем выбор категории для Яндекс Метрики
+            if (typeof trackCategorySelect === 'function') {
+                trackCategorySelect(card.dataset.category);
+            }
+            
             showForm();
         });
     });
@@ -386,6 +392,11 @@ async function handleFormSubmit(e) {
 
     // Собираем данные формы
     const formData = collectFormData(form);
+    
+    // Отслеживаем событие отправки формы для Яндекс Метрики
+    if (typeof trackFormSubmit === 'function') {
+        trackFormSubmit(formData);
+    }
 
     // Показываем загрузку
     showLoadingState();
@@ -405,6 +416,11 @@ async function handleFormSubmit(e) {
         hideLoadingState();
 
         if (result.success) {
+            // Отслеживаем успешную отправку формы для Яндекс Метрики
+            if (typeof trackFormSuccess === 'function') {
+                trackFormSuccess();
+            }
+            
             showSuccessMessage();
             clearSavedProgress();
             showNotification(result.message || 'Заявка успешно отправлена!', 'success');

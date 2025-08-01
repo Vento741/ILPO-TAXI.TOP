@@ -203,7 +203,8 @@
             accurateTrackBounce: true,
             webvisor: true,
             trackHash: true,
-            ecommerce: "dataLayer"
+            ecommerce: "dataLayer",
+            yandexBot: true
         });
     </script>
     <noscript><div><img src="https://mc.yandex.ru/watch/101852978" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
@@ -1579,6 +1580,53 @@
     <!-- Custom JS -->
     <script src="static/js/calculator.js"></script>
     <script src="static/js/main.js"></script>
+    <script src="static/js/metrika-goals.js"></script>
+    
+    <!-- Инициализация отслеживания событий для Яндекс Метрики -->
+    <script>
+        // Добавляем обработчики событий для отслеживания целей
+        document.addEventListener('DOMContentLoaded', function() {
+            // Отслеживание клика по кнопке открытия чата
+            const chatToggle = document.getElementById('chatToggle');
+            if (chatToggle) {
+                chatToggle.addEventListener('click', function() {
+                    if (typeof ym !== 'undefined') {
+                        ym(101852978, 'reachGoal', 'CHAT_OPEN');
+                    }
+                });
+            }
+            
+            // Отслеживание клика по кнопке перехода к менеджеру
+            const transferToManagerBtn = document.getElementById('transferToManagerBtn');
+            if (transferToManagerBtn) {
+                transferToManagerBtn.addEventListener('click', function() {
+                    if (typeof ym !== 'undefined') {
+                        ym(101852978, 'reachGoal', 'MANAGER_TRANSFER');
+                    }
+                });
+            }
+            
+            // Отслеживание клика по телефонам
+            const phoneLinks = document.querySelectorAll('a[href^="tel:"]');
+            phoneLinks.forEach(function(link) {
+                link.addEventListener('click', function() {
+                    if (typeof ym !== 'undefined') {
+                        ym(101852978, 'reachGoal', 'PHONE_CLICK');
+                    }
+                });
+            });
+            
+            // Отслеживание клика по кнопкам регистрации
+            const signupButtons = document.querySelectorAll('.signup-btn, a[href*="signup"]');
+            signupButtons.forEach(function(button) {
+                button.addEventListener('click', function() {
+                    if (typeof ym !== 'undefined') {
+                        ym(101852978, 'reachGoal', 'SIGNUP_CLICK');
+                    }
+                });
+            });
+        });
+    </script>
 </body>
 
 </html>
